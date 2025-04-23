@@ -5,7 +5,7 @@ use anchor_spl::{
 };
 
 // Update with the actual deployed Program ID
-declare_id!("7LeARRwbauXQ1W4Cr22ZEyPUVP5wHqYijXvkvPaVpguP");
+declare_id!("yGBcgEFAAjnmNN479KeCk939BDTE1kuLAdbbWdpHMvp");
 
 pub const USER_SEED: &[u8] = b"user";
 pub const VAULT_SEED: &[u8] = b"vault";
@@ -50,6 +50,57 @@ pub mod skillstreak_program {
         token::transfer(cpi_ctx, deposit_amount)?;
 
         msg!("Deposited {} USDC.", deposit_amount);
+        Ok(())
+    }
+
+    // --- New Stake Instruction ---
+    pub fn stake(
+        ctx: Context<Stake>,
+        deposit_amount: u64,
+        lock_in_duration_days: u64,
+    ) -> Result<()> {
+        msg!("Staking funds for user: {}", ctx.accounts.user.key());
+        msg!("Amount to stake: {}", deposit_amount);
+        msg!("New lock-in duration (days): {}", lock_in_duration_days);
+
+        // Ensure deposit amount is greater than zero
+        if deposit_amount == 0 {
+            // TODO: Return a custom error enum later
+            return err!(ErrorCode::ZeroDepositAmount);
+        }
+
+        // --- 1. Transfer Tokens --- 
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.user_token_account.to_account_info(),
+            to: ctx.accounts.vault_token_account.to_account_info(),
+            authority: ctx.accounts.user.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
+        token::transfer(cpi_ctx, deposit_amount)?;
+        msg!("Transferred {} USDC to vault.", deposit_amount);
+
+        // --- 2. Update User State --- 
+        let user_state = &mut ctx.accounts.user_state;
+        let clock = Clock::get()?;
+        let current_timestamp = clock.unix_timestamp;
+
+        // Add to the existing deposit amount
+        user_state.deposit_amount = user_state.deposit_amount.checked_add(deposit_amount).unwrap(); // Consider error handling for overflow
+
+        // Update deposit timestamp
+        user_state.deposit_timestamp = current_timestamp;
+
+        // Calculate new lock-in end time based on current time + new duration
+        let lock_in_seconds = lock_in_duration_days.checked_mul(24 * 60 * 60).unwrap(); // Consider error handling
+        user_state.lock_in_end_timestamp = current_timestamp.checked_add(lock_in_seconds as i64).unwrap(); // Consider error handling
+
+        // We don't update initial_deposit_amount, current_streak, miss_count, or last_task_timestamp here
+
+        msg!("Updated User State:");
+        msg!("  New Total Deposit: {}", user_state.deposit_amount);
+        msg!("  New Lock-in Ends At: {}", user_state.lock_in_end_timestamp);
+
         Ok(())
     }
 }
@@ -110,4 +161,58 @@ pub struct UserState {
     pub deposit_timestamp: i64,
     pub last_task_timestamp: i64,
     pub lock_in_end_timestamp: i64,
+}
+
+// --- New Stake Accounts Struct ---
+#[derive(Accounts)]
+#[instruction(deposit_amount: u64, lock_in_duration_days: u64)] // Instructions args can be useful for constraints
+pub struct Stake<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    #[account(
+        mut, // User's token account balance will decrease
+        constraint = user_token_account.mint == usdc_mint.key(),
+        constraint = user_token_account.owner == user.key()
+    )]
+    pub user_token_account: Account<'info, TokenAccount>,
+
+    #[account(
+        mut, // We need to update the user's state
+        seeds = [USER_SEED, user.key().as_ref()], // Ensure it matches the user signer
+        bump, // Anchor will auto-find the bump
+        // Optional: Add constraint to ensure user_state.user == user.key() if not implicitly covered by seeds
+        // constraint = user_state.user == user.key(),
+    )]
+    pub user_state: Account<'info, UserState>,
+
+    #[account(
+        mut, // Vault's token account balance will increase
+        associated_token::mint = usdc_mint,
+        associated_token::authority = vault, // Ensure vault PDA is authority
+    )]
+    pub vault_token_account: Account<'info, TokenAccount>,
+
+    /// CHECK: Vault PDA authority, seeds checked implicitly by ATA derivation + constraints
+    #[account(
+        seeds = [VAULT_SEED],
+        bump
+    )]
+    pub vault: AccountInfo<'info>,
+
+    // We need the mint account to validate the token accounts
+    pub usdc_mint: Account<'info, Mint>,
+
+    // Required programs
+    pub system_program: Program<'info, System>, // Not strictly needed unless creating accounts, but good practice
+    pub token_program: Program<'info, Token>,
+    pub associated_token_program: Program<'info, AssociatedToken>, // Needed if ATAs might be created (though less likely here)
+}
+
+// Optional: Define Custom Errors
+#[error_code]
+pub enum ErrorCode {
+    #[msg("Deposit amount cannot be zero.")]
+    ZeroDepositAmount,
+    // Add other potential errors here
 }

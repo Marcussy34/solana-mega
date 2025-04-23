@@ -37,12 +37,16 @@ export default function TestPage() {
     const { connection } = useConnection();
     const { publicKey, sendTransaction, wallet } = useWallet();
     const [program, setProgram] = useState(null);
-    const [depositAmount, setDepositAmount] = useState('1'); // Default 1 USDC
-    const [lockInDays, setLockInDays] = useState('7'); // Default 7 days
+    const [depositAmount, setDepositAmount] = useState('1'); // For initialization
+    const [lockInDays, setLockInDays] = useState('7'); // For initialization
+    const [stakeAmount, setStakeAmount] = useState('0.5'); // Default 0.5 USDC for staking
+    const [stakeLockInDays, setStakeLockInDays] = useState('30'); // Default 30 days for staking
     const [logs, setLogs] = useState([]);
     const [txSig, setTxSig] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isClient, setIsClient] = useState(false); // State for client-side rendering
+    const [isUserInitialized, setIsUserInitialized] = useState(null); // null: loading, false: not initialized, true: initialized
+    const [userStatePDA, setUserStatePDA] = useState(null); // Store the PDA for potential future use
 
     // Ensure component only renders UI that depends on client state after mounting
     useEffect(() => {
@@ -84,6 +88,164 @@ export default function TestPage() {
         }
     }, [publicKey, connection, wallet]);
 
+    // --- Check if User State PDA exists ---
+    useEffect(() => {
+        // Only run if program, publicKey, and connection are available
+        if (program && publicKey && connection) {
+            log("Checking if user state exists...");
+            setIsUserInitialized(null); // Set to loading state
+
+            try {
+                // Derive the User State PDA
+                const [pda, bump] = PublicKey.findProgramAddressSync(
+                    [USER_SEED, publicKey.toBuffer()],
+                    program.programId
+                );
+                setUserStatePDA(pda); // Store the PDA
+                log(`Derived User State PDA for check: ${pda.toBase58()}`);
+
+                // Check if account exists
+                connection.getAccountInfo(pda, 'confirmed')
+                    .then(accountInfo => {
+                        if (accountInfo === null) {
+                            // Account does not exist, user is not initialized
+                            log("User state account not found. User needs initialization.");
+                            setIsUserInitialized(false);
+                        } else {
+                            // Account exists, user is already initialized
+                            log("User state account found. User is already initialized.");
+                            setIsUserInitialized(true);
+                            // Optional: Fetch and log the state if needed
+                            // program.account.userState.fetch(pda).then(state => {
+                            //     log("Fetched existing User State:", state);
+                            // }).catch(fetchErr => {
+                            //     log("Error fetching existing user state:", fetchErr);
+                            // });
+                        }
+                    })
+                    .catch(error => {
+                        log(`Error checking user state account: ${error.message}`);
+                        console.error("Account Check Error:", error);
+                        setIsUserInitialized(false); // Assume not initialized on error, might need refinement
+                    });
+
+            } catch (error) {
+                log(`Error deriving user state PDA: ${error.message}`);
+                console.error("PDA Derivation Error:", error);
+                setIsUserInitialized(false); // Assume not initialized on error
+            }
+        } else {
+            // Reset if disconnected or program not ready
+            setIsUserInitialized(null);
+            setUserStatePDA(null);
+        }
+    }, [program, publicKey, connection]); // Re-run when these dependencies change
+
+    // --- Handler for Staking Funds (for initialized users) ---
+    const handleStake = async () => {
+        if (!program || !publicKey || !connection || !wallet?.adapter || !userStatePDA) {
+            log('Error: Wallet not connected, program not initialized, or user state PDA missing.');
+            return;
+        }
+        // Basic input validation
+        const stakeAmountNum = parseFloat(stakeAmount);
+        const stakeLockInDaysNum = parseInt(stakeLockInDays, 10);
+        if (isNaN(stakeAmountNum) || stakeAmountNum <= 0 || isNaN(stakeLockInDaysNum) || stakeLockInDaysNum <= 0) {
+            log('Error: Invalid stake amount or lock-in days.');
+            return;
+        }
+
+        setIsLoading(true);
+        setTxSig('');
+        log(`Attempting to stake ${stakeAmountNum} USDC for ${stakeLockInDaysNum} days...`);
+
+        try {
+            // --- 1. Derive PDAs and ATAs (reuse userStatePDA) ---
+            // Vault PDA
+            const [vaultPDA, vaultBump] = PublicKey.findProgramAddressSync(
+                [VAULT_SEED],
+                program.programId
+            );
+            log(`Vault Authority PDA: ${vaultPDA.toBase58()}`);
+
+            // User's USDC ATA
+            const userUsdcAta = getAssociatedTokenAddressSync(USDC_MINT, publicKey);
+            log(`User USDC ATA: ${userUsdcAta.toBase58()}`);
+
+            // Vault's USDC ATA
+            const vaultUsdcAta = getAssociatedTokenAddressSync(USDC_MINT, vaultPDA, true);
+            log(`Vault USDC ATA: ${vaultUsdcAta.toBase58()}`);
+
+            // --- 2. Prepare Instruction Arguments ---
+            const stakeAmountLamports = new BN(stakeAmountNum * 1_000_000); // Assuming 6 decimals for USDC
+            const stakeLockInDaysBN = new BN(stakeLockInDaysNum);
+
+            log(`Stake Amount (lamports): ${stakeAmountLamports.toString()}`);
+            log(`Stake Lock-in Days: ${stakeLockInDaysBN.toString()}`);
+
+            // --- 3. Build the stake instruction transaction ---
+            log("Building stake transaction...");
+            const stakeTransaction = await program.methods
+                .stake(stakeAmountLamports, stakeLockInDaysBN)
+                .accounts({
+                    user: publicKey,
+                    userTokenAccount: userUsdcAta,
+                    userState: userStatePDA, // Re-use the PDA derived earlier
+                    vaultTokenAccount: vaultUsdcAta,
+                    vault: vaultPDA,
+                    usdcMint: USDC_MINT,
+                    systemProgram: SystemProgram.programId,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                })
+                .transaction();
+
+            // --- 4. Send the stake transaction ---
+            log('Sending stake transaction...');
+            console.log("Stake Transaction:", stakeTransaction);
+            const stakeSignature = await sendTransaction(stakeTransaction, connection);
+
+            log('Stake Transaction sent:', stakeSignature);
+            setTxSig(stakeSignature); // Set the final signature
+
+            // --- 5. Confirm Transaction ---
+            log('Confirming stake transaction...');
+            const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+            const confirmation = await connection.confirmTransaction({
+                signature: stakeSignature,
+                blockhash,
+                lastValidBlockHeight
+            }, 'confirmed');
+
+            if (confirmation.value.err) {
+                log('Stake transaction confirmation failed:', confirmation.value.err);
+                try {
+                    const txDetails = await connection.getTransaction(stakeSignature, {maxSupportedTransactionVersion: 0});
+                    if (txDetails?.meta?.logMessages) {
+                        log("Failed Stake Transaction Logs:", txDetails.meta.logMessages.join('\n'));
+                    }
+                } catch (logError) {
+                    log("Could not fetch logs for failed stake transaction:", logError);
+                }
+                throw new Error(`Stake transaction failed: ${confirmation.value.err}`);
+            }
+
+            log('Stake transaction confirmed successfully.');
+            // Optional: Could re-fetch user state here to update UI display
+            // program.account.userState.fetch(userStatePDA).then(state => {
+            //     log("Refreshed User State:", state);
+            // });
+
+        } catch (error) {
+            log('Error during stake:', error.message || JSON.stringify(error));
+            if (error.logs) {
+                log("Program Logs:", error.logs.join('\n'));
+            }
+            console.error("Stake Error:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     // --- Main Interaction Logic ---
     const handleInitializeUser = async () => {
@@ -95,13 +257,22 @@ export default function TestPage() {
         setTxSig('');
         log('Attempting to initialize user...');
 
+        // Double check: Should ideally not reach here if already initialized, but good safeguard
+        if (isUserInitialized === true) {
+            log("Initialization aborted: User is already initialized.");
+            setIsLoading(false);
+            return;
+        }
+
         try {
             // --- 1. Derive PDAs ---
-            const [userStatePDA, userStateBump] = PublicKey.findProgramAddressSync(
-                [USER_SEED, publicKey.toBuffer()],
-                program.programId
-            );
-            log(`User State PDA: ${userStatePDA.toBase58()}`);
+            const [derivedUserStatePDA, userStateBump] = userStatePDA
+                ? [userStatePDA, PublicKey.findProgramAddressSync([USER_SEED, publicKey.toBuffer()], program.programId)[1]] // Reuse PDA, recalculate bump (usually stable)
+                : PublicKey.findProgramAddressSync( // Fallback if not set yet (should be rare)
+                    [USER_SEED, publicKey.toBuffer()],
+                    program.programId
+                );
+            log(`User State PDA: ${derivedUserStatePDA.toBase58()}`);
 
             const [vaultPDA, vaultBump] = PublicKey.findProgramAddressSync(
                 [VAULT_SEED],
@@ -203,7 +374,7 @@ export default function TestPage() {
                 .accounts({
                     user: publicKey,
                     userTokenAccount: userUsdcAta,
-                    userState: userStatePDA,
+                    userState: derivedUserStatePDA,
                     vaultTokenAccount: vaultUsdcAta,
                     vault: vaultPDA,
                     usdcMint: USDC_MINT,
@@ -249,9 +420,10 @@ export default function TestPage() {
             }
 
             log('Transaction confirmed successfully.');
+            setIsUserInitialized(true); // Update the state to re-render the UI
 
             // Optional: Fetch state after successful confirmation
-            // const fetchedState = await program.account.userState.fetch(userStatePDA);
+            // const fetchedState = await program.account.userState.fetch(derivedUserStatePDA);
             // log('Fetched User State:', fetchedState);
 
         } catch (error) {
@@ -283,40 +455,87 @@ export default function TestPage() {
             {/* Interaction Section - Render only on client and when ready */}
             {isClient && publicKey && program && (
                 <div>
-                    <h2>Initialize User</h2>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label>
-                            Deposit Amount (USDC):{' '}
-                            <input
-                                type="number"
-                                value={depositAmount}
-                                onChange={(e) => setDepositAmount(e.target.value)}
-                                min="0.000001" // Smallest unit based on decimals
-                                step="0.000001"
-                                disabled={isLoading}
-                            />
-                        </label>
-                    </div>
-                    <div style={{ marginBottom: '10px' }}>
-                        <label>
-                            Lock-in Duration (Days):{' '}
-                            <input
-                                type="number"
-                                value={lockInDays}
-                                onChange={(e) => setLockInDays(e.target.value)}
-                                min="1"
-                                step="1"
-                                disabled={isLoading}
-                            />
-                        </label>
-                    </div>
-                    <button onClick={handleInitializeUser} disabled={isLoading || !publicKey}>
-                        {isLoading ? 'Processing...' : 'Initialize User'}
-                    </button>
+                    {/* Conditional Rendering based on initialization status */}
+                    {isUserInitialized === null && <p>Checking initialization status...</p>}
+
+                    {isUserInitialized === true && <p>User is already initialized.</p>}
+
+                    {isUserInitialized === false && (
+                        <div>
+                            <h2>Initialize User</h2>
+                            <div style={{ marginBottom: '10px' }}>
+                                <label>
+                                    Deposit Amount (USDC):{' '}
+                                    <input
+                                        type="number"
+                                        value={depositAmount}
+                                        onChange={(e) => setDepositAmount(e.target.value)}
+                                        min="0.000001" // Smallest unit based on decimals
+                                        step="0.000001"
+                                        disabled={isLoading}
+                                    />
+                                </label>
+                            </div>
+                            <div style={{ marginBottom: '10px' }}>
+                                <label>
+                                    Lock-in Duration (Days):{' '}
+                                    <input
+                                        type="number"
+                                        value={lockInDays}
+                                        onChange={(e) => setLockInDays(e.target.value)}
+                                        min="1"
+                                        step="1"
+                                        disabled={isLoading}
+                                    />
+                                </label>
+                            </div>
+                            <button onClick={handleInitializeUser} disabled={isLoading || !publicKey}>
+                                {isLoading ? 'Processing...' : 'Initialize User'}
+                            </button>
+                        </div>
+                    )}
+
+                    {/* --- Stake Section (Only for Initialized Users) --- */}
+                    {isUserInitialized === true && (
+                        <div style={{ marginTop: '30px', borderTop: '1px dashed #aaa', paddingTop: '20px' }}>
+                            <h2>Stake Additional Funds</h2>
+                            <div style={{ marginBottom: '10px' }}>
+                                <label>
+                                    Stake Amount (USDC):{' '}
+                                    <input
+                                        type="number"
+                                        value={stakeAmount}
+                                        onChange={(e) => setStakeAmount(e.target.value)}
+                                        min="0.000001"
+                                        step="0.000001"
+                                        disabled={isLoading}
+                                        style={{ color: '#000000' }}
+                                    />
+                                </label>
+                            </div>
+                            <div style={{ marginBottom: '10px' }}>
+                                <label>
+                                    New Lock-in Duration (Days):{' '}
+                                    <input
+                                        type="number"
+                                        value={stakeLockInDays}
+                                        onChange={(e) => setStakeLockInDays(e.target.value)}
+                                        min="1"
+                                        step="1"
+                                        disabled={isLoading}
+                                        style={{ color: '#000000' }}
+                                    />
+                                </label>
+                            </div>
+                            <button onClick={handleStake} disabled={isLoading || !publicKey}>
+                                {isLoading ? 'Processing Stake...' : 'Stake Funds'}
+                            </button>
+                        </div>
+                    )}
                 </div>
             )}
-            {/* Render placeholder or message if not ready */}
-            {isClient && (!publicKey || !program) && (
+            {/* Render placeholder or message if wallet not connected */}
+            {isClient && !publicKey && (
                 <p>Please connect your wallet to interact.</p>
             )}
 
@@ -337,7 +556,7 @@ export default function TestPage() {
             {/* Logs */}
             <div style={{ marginTop: '20px', borderTop: '1px solid #ccc', paddingTop: '10px' }}>
                 <h3>Logs:</h3>
-                <pre style={{ maxHeight: '300px', overflowY: 'auto', background: '#f0f0f0', padding: '10px', whiteSpace: 'pre-wrap', wordWrap: 'break-word' }}>
+                <pre style={{ maxHeight: '300px', overflowY: 'auto', background: '#f0f0f0', padding: '10px', whiteSpace: 'pre-wrap', wordWrap: 'break-word', color: '#000000' }}>
                     {/* Render logs only on client */}
                     {isClient ? logs.join('\n') : ''}
                 </pre>

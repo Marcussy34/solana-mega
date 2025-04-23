@@ -6,7 +6,7 @@ resolution = true
 skip-lint = false
 
 [programs.devnet]
-skillstreak_program = "7LeARRwbauXQ1W4Cr22ZEyPUVP5wHqYijXvkvPaVpguP"
+skillstreak_program = "yGBcgEFAAjnmNN479KeCk939BDTE1kuLAdbbWdpHMvp"
 
 [registry]
 url = "https://api.apr.dev"
