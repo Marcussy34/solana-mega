@@ -7,7 +7,7 @@
 
 **SkillStreak** is a **Learn-to-Earn DeFi app** on **Solana** that helps users develop real-world skills while earning yield on their capital. Users deposit **USDC**, choose a learning track (like crypto, coding, or language skills), and complete **daily tasks** to earn up to **30% APR**.
 
-It’s designed to **gamify consistency** with **streaks**, **top-up penalties**, and a DeFi-powered reward system that builds both habit and capital. Think **Duolingo meets DeFi**, with **financial stakes for personal growth**.
+It's designed to **gamify consistency** with **streaks**, **top-up penalties**, and a DeFi-powered reward system that builds both habit and capital. Think **Duolingo meets DeFi**, with **financial stakes for personal growth**.
 
 ---
 
@@ -16,7 +16,7 @@ It’s designed to **gamify consistency** with **streaks**, **top-up penalties**
 - 💰 Lock up USDC → 📚 Learn daily → 🏆 Earn interest
 - Miss a day? Pay a small penalty to stay in—or risk deductions.
 - The **more consistent you are**, the **more you earn**.
-- Users can even **bet on each other’s performance** with a **Long/Short streak market**.
+- Users can even **bet on each other's performance** with a **Long/Short streak market**.
 
 ---
 
@@ -31,9 +31,9 @@ It’s designed to **gamify consistency** with **streaks**, **top-up penalties**
 
 ### 📚 2. **Daily Learning Tasks**
 - Users pick a track:
-  - “Solana Basics”
-  - “Rust for Smart Contracts”
-  - “Duolingo-style Language Learning” *(in-app simulation)*
+  - "Solana Basics"
+  - "Rust for Smart Contracts"
+  - "Duolingo-style Language Learning" *(in-app simulation)*
 - Completing a task each day **maintains your streak**.
 - Streak = yield multiplier + reputation boost.
 
@@ -63,7 +63,7 @@ It’s designed to **gamify consistency** with **streaks**, **top-up penalties**
 ## 🧠 Bonus Feature (Simulated for MVP)
 
 ### 🗣️ **Duolingo-style Language Track**
-- Fully integrated second learning track that mimics Duolingo’s micro-lessons.
+- Fully integrated second learning track that mimics Duolingo's micro-lessons.
 - Designed to showcase **multi-track support** and **fun UX**.
 - Sets the stage for future **third-party learning integrations**.
 
@@ -71,13 +71,13 @@ It’s designed to **gamify consistency** with **streaks**, **top-up penalties**
 
 ## 📈 Long/Short Streaks – *Social Speculation Layer*
 
-**A new game layer:** Let users **bet on each other’s consistency.**
+**A new game layer:** Let users **bet on each other's consistency.**
 
 ### How it Works:
-- **“Long” someone** → You think they’ll keep their streak.
-- **“Short” someone** → You think they’ll break it.
+- **"Long" someone** → You think they'll keep their streak.
+- **"Short" someone** → You think they'll break it.
 - You stake USDC on your prediction (e.g., 10 USDC).
-- Outcome determined by user’s streak performance.
+- Outcome determined by user's streak performance.
 
 #### MVP Implementation:
 - Built on **Solana Devnet** using **Anchor smart contracts**.
@@ -175,7 +175,7 @@ SkillStreak addresses real problems:
 ## 🚀 Status
 
 - MVP learning track: ✅  
-- USDC staking & yield logic: ✅  
+- USDC deposit & yield logic: ✅  
 - Streak management: ✅  
 - Simulated Duolingo track: ✅  
 - Long/Short streak betting (on Devnet): ✅  

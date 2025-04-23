@@ -16,7 +16,7 @@ pub mod skillstreak_program {
 
     // --- Create User State Instruction ---
     // Initializes the user state account with default values.
-    // This does NOT handle deposits, that's done via the 'stake' instruction.
+    // This does NOT handle deposits, that's done via the 'deposit' instruction.
     pub fn create_user_state(ctx: Context<CreateUserState>) -> Result<()> {
         msg!("Creating user state account for: {}", ctx.accounts.user.key());
 
@@ -36,19 +36,18 @@ pub mod skillstreak_program {
         Ok(())
     }
 
-    // --- Stake Instruction ---
-    pub fn stake(
-        ctx: Context<Stake>,
+    // --- Deposit Instruction (Renamed from Stake) ---
+    pub fn deposit(
+        ctx: Context<Deposit>,
         deposit_amount: u64,
         lock_in_duration_days: u64,
     ) -> Result<()> {
-        msg!("Staking funds for user: {}", ctx.accounts.user.key());
-        msg!("Amount to stake: {}", deposit_amount);
+        msg!("Depositing funds for user: {}", ctx.accounts.user.key());
+        msg!("Amount to deposit: {}", deposit_amount);
         msg!("New lock-in duration (days): {}", lock_in_duration_days);
 
         // Ensure deposit amount is greater than zero
         if deposit_amount == 0 {
-            // TODO: Return a custom error enum later
             return err!(ErrorCode::ZeroDepositAmount);
         }
 
@@ -90,7 +89,7 @@ pub mod skillstreak_program {
 
 #[derive(Accounts)]
 #[instruction(deposit_amount: u64, lock_in_duration_days: u64)]
-pub struct Stake<'info> {
+pub struct Deposit<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
 

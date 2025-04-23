@@ -36,9 +36,9 @@ export default function TestPage() {
     const { connection } = useConnection();
     const { publicKey, sendTransaction, wallet } = useWallet();
     const [program, setProgram] = useState(null);
-    // Removed depositAmount, lockInDays state
-    const [stakeAmount, setStakeAmount] = useState('0.5'); // Default 0.5 USDC for staking
-    const [stakeLockInDays, setStakeLockInDays] = useState('30'); // Default 30 days for staking
+    // Renamed stake state variables to deposit
+    const [depositAmount, setDepositAmount] = useState('0.5'); // Default 0.5 USDC for depositing
+    const [depositLockInDays, setDepositLockInDays] = useState('30'); // Default 30 days for depositing
     const [logs, setLogs] = useState([]);
     const [txSig, setTxSig] = useState('');
     const [isLoading, setIsLoading] = useState(false); // Tracks loading for *any* transaction
@@ -171,7 +171,7 @@ export default function TestPage() {
                     program.programId
                 );
                 derivedPDA = pda; // Store derived PDA
-                setUserStatePDA(pda); // Store in state for other functions (like stake)
+                setUserStatePDA(pda); // Store in state for other functions (like deposit)
                 log(`Derived User State PDA for check: ${pda.toBase58()}`);
 
                 // Check if account exists
@@ -220,24 +220,23 @@ export default function TestPage() {
     // --- REMOVED handleInitializeUser function ---
 
 
-    // --- Handler for Staking Funds (for initialized users) ---
-    // (Keep existing handleStake function as is)
-    const handleStake = async () => {
+    // --- Handler for Depositing Funds (Renamed from handleStake) ---
+    const handleDeposit = async () => {
         if (!program || !publicKey || !connection || !wallet?.adapter || !userStatePDA) {
             log('Error: Wallet not connected, program not initialized, or user state PDA missing.');
             return;
         }
         // Basic input validation
-        const stakeAmountNum = parseFloat(stakeAmount);
-        const stakeLockInDaysNum = parseInt(stakeLockInDays, 10);
-        if (isNaN(stakeAmountNum) || stakeAmountNum <= 0 || isNaN(stakeLockInDaysNum) || stakeLockInDaysNum <= 0) {
-            log('Error: Invalid stake amount or lock-in days.');
+        const depositAmountNum = parseFloat(depositAmount);
+        const depositLockInDaysNum = parseInt(depositLockInDays, 10);
+        if (isNaN(depositAmountNum) || depositAmountNum <= 0 || isNaN(depositLockInDaysNum) || depositLockInDaysNum <= 0) {
+            log('Error: Invalid deposit amount or lock-in days.');
             return;
         }
 
         setIsLoading(true);
         setTxSig('');
-        log(`Attempting to stake ${stakeAmountNum} USDC for ${stakeLockInDaysNum} days...`);
+        log(`Attempting to deposit ${depositAmountNum} USDC for ${depositLockInDaysNum} days...`);
 
         try {
             // --- 1. Derive PDAs and ATAs (reuse userStatePDA) ---
@@ -250,19 +249,19 @@ export default function TestPage() {
             const userUsdcAta = getAssociatedTokenAddressSync(USDC_MINT, publicKey);
             log(`User USDC ATA: ${userUsdcAta.toBase58()}`);
 
-            // Check if user's USDC ATA exists before staking
+            // Check if user's USDC ATA exists before depositing
             try {
                 await getAccount(connection, userUsdcAta, 'confirmed');
-                log("User's USDC ATA verified for staking.");
+                log("User's USDC ATA verified for depositing.");
             } catch (error) {
                 if (error.name === 'TokenAccountNotFoundError') {
-                     log("Error: User's USDC ATA does not exist. Cannot stake. Please acquire some USDC first.");
-                     // Potentially add logic here to create the ATA if desired, similar to the old initializeUser
+                     log("Error: User's USDC ATA does not exist. Cannot deposit. Please acquire some USDC first.");
+                     // Potentially add logic here to create the ATA if desired
                 } else {
                      log("Error checking user's USDC ATA:", error);
                 }
                 setIsLoading(false);
-                return; // Stop staking if ATA doesn't exist
+                return; // Stop depositing if ATA doesn't exist
             }
 
 
@@ -270,16 +269,16 @@ export default function TestPage() {
             log(`Vault USDC ATA: ${vaultUsdcAta.toBase58()}`);
 
             // --- 2. Prepare Instruction Arguments ---
-            const stakeAmountLamports = new BN(stakeAmountNum * 1_000_000); // Assuming 6 decimals for USDC
-            const stakeLockInDaysBN = new BN(stakeLockInDaysNum);
+            const depositAmountLamports = new BN(depositAmountNum * 1_000_000); // Assuming 6 decimals for USDC
+            const depositLockInDaysBN = new BN(depositLockInDaysNum);
 
-            log(`Stake Amount (lamports): ${stakeAmountLamports.toString()}`);
-            log(`Stake Lock-in Days: ${stakeLockInDaysBN.toString()}`);
+            log(`Deposit Amount (lamports): ${depositAmountLamports.toString()}`);
+            log(`Deposit Lock-in Days: ${depositLockInDaysBN.toString()}`);
 
-            // --- 3. Build the stake instruction transaction ---
-            log("Building stake transaction...");
-            const stakeTransaction = await program.methods
-                .stake(stakeAmountLamports, stakeLockInDaysBN)
+            // --- 3. Build the deposit instruction transaction ---
+            log("Building deposit transaction...");
+            const depositTransaction = await program.methods
+                .deposit(depositAmountLamports, depositLockInDaysBN) // Renamed method call
                 .accounts({
                     user: publicKey,
                     userTokenAccount: userUsdcAta,
@@ -287,54 +286,54 @@ export default function TestPage() {
                     vaultTokenAccount: vaultUsdcAta,
                     vault: vaultPDA,
                     usdcMint: USDC_MINT,
-                    systemProgram: SystemProgram.programId, // Keep for consistency, though maybe not strictly needed by stake
+                    systemProgram: SystemProgram.programId, // Keep for consistency, though maybe not strictly needed by deposit
                     tokenProgram: TOKEN_PROGRAM_ID,
                     associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
                 })
                 .transaction();
 
-            // --- 4. Send the stake transaction ---
-            log('Sending stake transaction...');
-            console.log("Stake Transaction:", stakeTransaction);
-            const stakeSignature = await sendTransaction(stakeTransaction, connection);
+            // --- 4. Send the deposit transaction ---
+            log('Sending deposit transaction...');
+            console.log("Deposit Transaction:", depositTransaction);
+            const depositSignature = await sendTransaction(depositTransaction, connection);
 
-            log('Stake Transaction sent:', stakeSignature);
-            setTxSig(stakeSignature); // Set the final signature
+            log('Deposit Transaction sent:', depositSignature);
+            setTxSig(depositSignature); // Set the final signature
 
             // --- 5. Confirm Transaction ---
-            log('Confirming stake transaction...');
+            log('Confirming deposit transaction...');
             const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
             const confirmation = await connection.confirmTransaction({
-                signature: stakeSignature,
+                signature: depositSignature,
                 blockhash,
                 lastValidBlockHeight
             }, 'confirmed');
 
             if (confirmation.value.err) {
-                log('Stake transaction confirmation failed:', confirmation.value.err);
+                log('Deposit transaction confirmation failed:', confirmation.value.err);
                 try {
-                    const txDetails = await connection.getTransaction(stakeSignature, {maxSupportedTransactionVersion: 0});
+                    const txDetails = await connection.getTransaction(depositSignature, {maxSupportedTransactionVersion: 0});
                     if (txDetails?.meta?.logMessages) {
-                        log("Failed Stake Transaction Logs:", txDetails.meta.logMessages.join('\n'));
+                        log("Failed Deposit Transaction Logs:", txDetails.meta.logMessages.join('\n'));
                     }
                 } catch (logError) {
-                    log("Could not fetch logs for failed stake transaction:", logError);
+                    log("Could not fetch logs for failed deposit transaction:", logError);
                 }
-                throw new Error(`Stake transaction failed: ${confirmation.value.err}`);
+                throw new Error(`Deposit transaction failed: ${confirmation.value.err}`);
             }
 
-            log('Stake transaction confirmed successfully.');
+            log('Deposit transaction confirmed successfully.');
             // Optional: Could re-fetch user state here to update UI display
             // program.account.userState.fetch(userStatePDA).then(state => {
             //     log("Refreshed User State:", state);
             // });
 
         } catch (error) {
-            log('Error during stake:', error.message || JSON.stringify(error));
+            log('Error during deposit:', error.message || JSON.stringify(error)); // Renamed error log context
             if (error.logs) {
                 log("Program Logs:", error.logs.join('\n'));
             }
-            console.error("Stake Error:", error);
+            console.error("Deposit Error:", error); // Renamed console error context
         } finally {
             setIsLoading(false);
         }
@@ -364,20 +363,20 @@ export default function TestPage() {
                     {/* Optional: Add message for creation failure */}
                     {/* {isUserInitialized === false && !isLoading && <p>Automatic profile creation failed. Please reconnect wallet or refresh.</p>} */}
 
-                    {/* --- Stake Section (Only when user state exists/is created) --- */}
+                    {/* --- Deposit Section (Renamed from Stake) --- */}
                     {isUserInitialized === true && (
-                        <div style={{ marginTop: '30px', borderTop: '1px dashed #aaa', paddingTop: '20px' }}> {/* Corrected style string */}
+                        <div style={{ marginTop: '30px', borderTop: '1px dashed #aaa', paddingTop: '20px' }}>
                              {/* Maybe add a clearer message that profile is ready */}
                              <p style={{ color: 'green', fontWeight: 'bold' }}>User profile ready.</p>
-                            <h2>Stake Funds</h2>
-                            {/* Stake Amount Input */}
+                            <h2>Deposit Funds</h2>
+                            {/* Deposit Amount Input */}
                             <div style={{ marginBottom: '10px' }}>
                                 <label>
-                                    Stake Amount (USDC):{' '}
+                                    Deposit Amount (USDC):{' '}
                                     <input
                                         type="number"
-                                        value={stakeAmount}
-                                        onChange={(e) => setStakeAmount(e.target.value)}
+                                        value={depositAmount} // Renamed state variable
+                                        onChange={(e) => setDepositAmount(e.target.value)} // Renamed state setter
                                         min="0.000001"
                                         step="0.000001"
                                         disabled={isLoading}
@@ -391,18 +390,18 @@ export default function TestPage() {
                                     Lock-in Duration (Days):{' '}
                                     <input
                                         type="number"
-                                        value={stakeLockInDays}
-                                        onChange={(e) => setStakeLockInDays(e.target.value)}
-                                        min="1" // Assuming minimum 1 day lock for stake too
+                                        value={depositLockInDays} // Renamed state variable
+                                        onChange={(e) => setDepositLockInDays(e.target.value)} // Renamed state setter
+                                        min="1" // Assuming minimum 1 day lock for deposit too
                                         step="1"
                                         disabled={isLoading}
                                         style={{ color: '#000000' }}
                                     />
                                 </label>
                             </div>
-                            {/* Stake Button */}
-                            <button onClick={handleStake} disabled={isLoading || !publicKey}>
-                                {isLoading ? 'Processing Stake...' : 'Stake Funds'}
+                            {/* Deposit Button */}
+                            <button onClick={handleDeposit} disabled={isLoading || !publicKey}> {/* Renamed onClick handler */}
+                                {isLoading ? 'Processing Deposit...' : 'Deposit Funds'} {/* Renamed button text */}
                             </button>
                         </div>
                     )}
@@ -437,5 +436,5 @@ export default function TestPage() {
         </div>
     );
 }
-// Added import for getAccount used in handleStake
+// Added import for getAccount used in handleDeposit
 import { getAccount } from '@solana/spl-token'; 
