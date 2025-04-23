@@ -105,7 +105,7 @@ This document outlines the planned implementation phases for the core SkillStrea
     *   Checks if `last_task_timestamp` is recent enough. If yes, do nothing or update state. If no, call `record_miss` logic internally.
 
 2.  **`harvest_and_distribute` Instruction:**
-    *   Called periodically by Cron/etc.
+    *   Called periodically by Cron/etc. (USE node-cron)
     *   Performs CPI calls to `harvest()` on integrated DeFi protocols.
     *   Updates internal `accrued_yield` tracking (maybe pool-based before distribution).
 
