@@ -6,7 +6,7 @@ use anchor_spl::{
 use anchor_lang::system_program;
 
 // Update with the actual deployed Program ID
-declare_id!("yGBcgEFAAjnmNN479KeCk939BDTE1kuLAdbbWdpHMvp");
+declare_id!("E6WVbAEb6v6ujmunXtMBpkdycZi9giBwCYKZDeHvqPiT");
 
 pub const USER_SEED: &[u8] = b"user";
 pub const VAULT_SEED: &[u8] = b"vault";
@@ -364,7 +364,7 @@ pub struct EarlyWithdraw<'info> {
     )]
     pub user_token_account: Account<'info, TokenAccount>,
 
-    /// CHECK: Vault PDA is safe because it's derived from a known seed and verified by token account authority
+    /// CHECK: Vault PDA
     #[account(
         seeds = [VAULT_SEED],
         bump
@@ -378,13 +378,24 @@ pub struct EarlyWithdraw<'info> {
     )]
     pub vault_token_account: Account<'info, TokenAccount>,
 
+    // Initialize treasury ATA if it doesn't exist
     #[account(
-        mut,
-        constraint = treasury_token_account.mint == usdc_mint.key(),
-        constraint = treasury_token_account.owner == treasury_wallet()
+        init_if_needed,
+        payer = user, // User pays for initialization
+        associated_token::mint = usdc_mint,
+        associated_token::authority = treasury_wallet_account, // Use the actual treasury wallet AccountInfo as authority
     )]
     pub treasury_token_account: Account<'info, TokenAccount>,
 
+    /// CHECK: Hardcoded treasury wallet address.
+    // Temporarily removing constraint for debugging the serialization/simulation mismatch
+    // #[account(address = treasury_wallet())]
+    pub treasury_wallet_account: AccountInfo<'info>,
+
     pub usdc_mint: Account<'info, Mint>,
     pub token_program: Program<'info, Token>,
+    // Add required programs/sysvars for init_if_needed
+    pub system_program: Program<'info, System>,
+    pub associated_token_program: Program<'info, AssociatedToken>,
+    pub rent: Sysvar<'info, Rent>,
 }

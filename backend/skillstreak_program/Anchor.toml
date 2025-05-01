@@ -1,13 +1,13 @@
 [toolchain]
-package_manager = "yarn"
 anchor_version = "0.31.1"
+package_manager = "yarn"
 
 [features]
 resolution = true
 skip-lint = false
 
 [programs.devnet]
-skillstreak_program = "yGBcgEFAAjnmNN479KeCk939BDTE1kuLAdbbWdpHMvp"
+skillstreak_program = "E6WVbAEb6v6ujmunXtMBpkdycZi9giBwCYKZDeHvqPiT"
 
 [registry]
 url = "https://api.apr.dev"
