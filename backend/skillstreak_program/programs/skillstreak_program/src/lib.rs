@@ -3,6 +3,7 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     token::{self, Mint, Token, TokenAccount, Transfer},
 };
+use anchor_lang::system_program;
 
 // Update with the actual deployed Program ID
 declare_id!("yGBcgEFAAjnmNN479KeCk939BDTE1kuLAdbbWdpHMvp");
@@ -210,25 +211,25 @@ pub struct Deposit<'info> {
     pub user: Signer<'info>,
 
     #[account(
-        mut, // User's token account balance will decrease
+        mut,
         constraint = user_token_account.mint == usdc_mint.key(),
         constraint = user_token_account.owner == user.key()
     )]
     pub user_token_account: Account<'info, TokenAccount>,
 
     #[account(
-        mut, // We need to update the user's state
-        seeds = [USER_SEED, user.key().as_ref()], // Ensure it matches the user signer
-        bump, // Anchor will auto-find the bump
-        // Optional: Add constraint to ensure user_state.user == user.key() if not implicitly covered by seeds
-        // constraint = user_state.user == user.key(),
+        mut,
+        seeds = [USER_SEED, user.key().as_ref()],
+        bump,
     )]
     pub user_state: Account<'info, UserState>,
 
+    // Use init_if_needed for the vault's token account
     #[account(
-        mut, // Vault's token account balance will increase
+        init_if_needed, // Initialize if it doesn't exist
+        payer = user,    // The user pays for initialization
         associated_token::mint = usdc_mint,
-        associated_token::authority = vault, // Ensure vault PDA is authority
+        associated_token::authority = vault, // Vault PDA is the authority
     )]
     pub vault_token_account: Account<'info, TokenAccount>,
 
@@ -239,13 +240,13 @@ pub struct Deposit<'info> {
     )]
     pub vault: AccountInfo<'info>,
 
-    // We need the mint account to validate the token accounts
     pub usdc_mint: Account<'info, Mint>,
 
     // Required programs
-    pub system_program: Program<'info, System>, // Not strictly needed unless creating accounts, but good practice
+    pub system_program: Program<'info, System>, // Needed for init_if_needed
     pub token_program: Program<'info, Token>,
-    pub associated_token_program: Program<'info, AssociatedToken>, // Needed if ATAs might be created (though less likely here)
+    pub associated_token_program: Program<'info, AssociatedToken>, // Needed for init_if_needed
+    pub rent: Sysvar<'info, Rent>, // Needed for init_if_needed
 }
 
 #[account]

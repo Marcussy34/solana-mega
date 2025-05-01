@@ -99,10 +99,9 @@ export default function TestPage() {
 
         setIsLoading(true);
         setTxSig(''); // Clear previous sig
-        log('Attempting to create user state PDA automatically...');
+        log('Attempting to create user profile...');
 
         try {
-            log("Building createUserState transaction...");
             const createUserTx = await program.methods
                 .createUserState()
                 .accounts({
@@ -112,13 +111,10 @@ export default function TestPage() {
                 })
                 .transaction();
 
-            log('Sending createUserState transaction...');
             const createSig = await sendTransaction(createUserTx, connection);
-            log('Create User State transaction sent:', createSig);
-            // Optionally update txSig state to show this temporary signature
-            // setTxSig(createSig);
+            log('Create Profile transaction sent:', createSig);
 
-            log('Confirming user state creation...');
+            log('Confirming user profile creation...');
             const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
             const confirmation = await connection.confirmTransaction({
                 signature: createSig,
@@ -127,8 +123,7 @@ export default function TestPage() {
             }, 'confirmed');
 
             if (confirmation.value.err) {
-                log('User state creation transaction confirmation failed:', confirmation.value.err);
-                 // Try getting logs
+                log('Profile creation confirmation failed:', confirmation.value.err);
                  try {
                      const txDetails = await connection.getTransaction(createSig, {maxSupportedTransactionVersion: 0});
                      if (txDetails?.meta?.logMessages) {
@@ -140,11 +135,11 @@ export default function TestPage() {
                 throw new Error(`User state creation failed: ${confirmation.value.err}`);
             }
 
-            log('User state created and confirmed successfully.');
+            log('User profile created successfully.');
             setIsUserInitialized(true); // <-- Set state to true upon success
 
         } catch (error) {
-            log('Error during automatic user state creation:', error.message || JSON.stringify(error));
+            log('Error during profile creation:', error.message || JSON.stringify(error));
             if (error.logs) {
                 log("Program Logs:", error.logs.join('\n'));
             }
@@ -172,32 +167,29 @@ export default function TestPage() {
                 );
                 derivedPDA = pda; // Store derived PDA
                 setUserStatePDA(pda); // Store in state for other functions (like deposit)
-                log(`Derived User State PDA for check: ${pda.toBase58()}`);
+                log(`Derived User State PDA: ${pda.toBase58()}`);
 
                 // Check if account exists
-                log("Checking if user state exists...");
+                log("Checking if user profile exists...");
                 connection.getAccountInfo(pda, 'confirmed')
                     .then(accountInfo => {
                         if (!publicKey) return; // Check if publicKey became null during async operation
 
                         if (accountInfo === null) {
-                            // Account does not exist, user is not initialized
-                            log("User state account not found. Triggering automatic creation...");
+                            log("User profile not found. Creating automatically...");
                             setIsUserInitialized(false); // Mark as needing creation
-                            // Call creation function, passing the derived PDA
                             if (derivedPDA) {
                                 handleCreateUserState(derivedPDA);
                             } else {
                                 log("Error: PDA was not derived before attempting creation.");
                             }
                         } else {
-                            // Account exists, user is already initialized
-                            log("User state account found. User is initialized.");
+                            log("User profile found.");
                             setIsUserInitialized(true); // Mark as initialized
                         }
                     })
                     .catch(error => {
-                        log(`Error checking user state account: ${error.message}`);
+                        log(`Error checking user profile: ${error.message}`);
                         console.error("Account Check Error:", error);
                         setIsUserInitialized(false); // Assume not initialized on error
                     });
@@ -249,21 +241,18 @@ export default function TestPage() {
             const userUsdcAta = getAssociatedTokenAddressSync(USDC_MINT, publicKey);
             log(`User USDC ATA: ${userUsdcAta.toBase58()}`);
 
-            // Check if user's USDC ATA exists before depositing
             try {
                 await getAccount(connection, userUsdcAta, 'confirmed');
-                log("User's USDC ATA verified for depositing.");
+                log("User's USDC ATA verified.");
             } catch (error) {
                 if (error.name === 'TokenAccountNotFoundError') {
-                     log("Error: User's USDC ATA does not exist. Cannot deposit. Please acquire some USDC first.");
-                     // Potentially add logic here to create the ATA if desired
+                     log("Error: Your USDC account doesn't exist. Please acquire some Devnet USDC.");
                 } else {
                      log("Error checking user's USDC ATA:", error);
                 }
                 setIsLoading(false);
                 return; // Stop depositing if ATA doesn't exist
             }
-
 
             const vaultUsdcAta = getAssociatedTokenAddressSync(USDC_MINT, vaultPDA, true);
             log(`Vault USDC ATA: ${vaultUsdcAta.toBase58()}`);
@@ -273,7 +262,7 @@ export default function TestPage() {
             const depositLockInDaysBN = new BN(depositLockInDaysNum);
 
             log(`Deposit Amount (lamports): ${depositAmountLamports.toString()}`);
-            log(`Deposit Lock-in Days: ${depositLockInDaysBN.toString()}`);
+            log(`Deposit Lock-in Days (BN): ${depositLockInDaysBN.toString()}`);
 
             // --- 3. Build the deposit instruction transaction ---
             log("Building deposit transaction...");
@@ -286,21 +275,47 @@ export default function TestPage() {
                     vaultTokenAccount: vaultUsdcAta,
                     vault: vaultPDA,
                     usdcMint: USDC_MINT,
-                    systemProgram: SystemProgram.programId, // Keep for consistency, though maybe not strictly needed by deposit
+                    systemProgram: SystemProgram.programId,
                     tokenProgram: TOKEN_PROGRAM_ID,
                     associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                    rent: web3.SYSVAR_RENT_PUBKEY,
                 })
                 .transaction();
 
-            // --- 4. Send the deposit transaction ---
+            // Manually set the fee payer for simulation
+            if (!depositTransaction.feePayer) {
+                // log("Setting fee payer for simulation..."); // Keep this commented, internal detail
+                depositTransaction.feePayer = publicKey;
+            }
+
+            // --- 4. Simulate the transaction (New Step) ---
+            log('Simulating deposit transaction...');
+            try {
+                const simulationResult = await connection.simulateTransaction(depositTransaction, undefined, true); // Added simulation
+                if (simulationResult.value.err) {
+                    log("Simulation Error:", simulationResult.value.err);
+                    log("Simulation Logs:", simulationResult.value.logs);
+                    throw new Error(`Transaction simulation failed: ${simulationResult.value.err}`);
+                }
+                log("Transaction simulation successful.");
+            } catch (simError) {
+                log("Error during simulation:", simError);
+                if (simError.simulationLogs) {
+                    log("Simulation Logs (from catch):", simError.simulationLogs);
+                }
+                 setIsLoading(false);
+                 return; // Stop if simulation fails
+            }
+
+            // --- 5. Send the deposit transaction ---
             log('Sending deposit transaction...');
-            console.log("Deposit Transaction:", depositTransaction);
+            // console.log("Deposit Transaction Object:", depositTransaction); // Optionally uncomment this for deep debugging
             const depositSignature = await sendTransaction(depositTransaction, connection);
 
             log('Deposit Transaction sent:', depositSignature);
-            setTxSig(depositSignature); // Set the final signature
+            setTxSig(depositSignature);
 
-            // --- 5. Confirm Transaction ---
+            // --- 6. Confirm Transaction ---
             log('Confirming deposit transaction...');
             const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
             const confirmation = await connection.confirmTransaction({
@@ -329,11 +344,8 @@ export default function TestPage() {
             // });
 
         } catch (error) {
-            log('Error during deposit:', error.message || JSON.stringify(error)); // Renamed error log context
-            if (error.logs) {
-                log("Program Logs:", error.logs.join('\n'));
-            }
-            console.error("Deposit Error:", error); // Renamed console error context
+            log('Error during deposit:', error.message || JSON.stringify(error));
+            console.error("Deposit Error:", error);
         } finally {
             setIsLoading(false);
         }
