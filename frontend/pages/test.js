@@ -85,15 +85,17 @@ export default function TestPage() {
     }, [publicKey, connection, wallet]);
 
     // --- Function to fetch and update user state (deposit amount) ---
-    const fetchAndUpdateUserState = async () => {
-        if (!program || !publicKey || !userStatePDA) {
-            log("Cannot fetch user state: prerequisites missing (program, publicKey, or userStatePDA).");
+    // Accepts an optional PDA override to use instead of the state variable
+    const fetchAndUpdateUserState = async (pdaOverride = null) => {
+        const pdaToUse = pdaOverride || userStatePDA;
+        if (!program || !publicKey || !pdaToUse) {
+            log(`Cannot fetch user state: prerequisites missing (program: ${!!program}, publicKey: ${!!publicKey}, pdaToUse: ${!!pdaToUse}).`);
             setUserDepositAmount(null); // Ensure display resets if prerequisites lost
             return;
         }
-        log("Fetching user state data...");
+        log(`Fetching user state data using PDA: ${pdaToUse.toBase58()}`);
         try {
-            const fetchedState = await program.account.userState.fetch(userStatePDA, 'confirmed');
+            const fetchedState = await program.account.userState.fetch(pdaToUse, 'confirmed');
             const depositUiAmount = fetchedState.depositAmount.toNumber() / 1_000_000; // Assuming 6 decimals for USDC
             log(`Fetched deposit amount (raw): ${fetchedState.depositAmount.toString()}, UI amount: ${depositUiAmount}`);
             setUserDepositAmount(depositUiAmount); // Update the state
@@ -210,8 +212,8 @@ export default function TestPage() {
                         } else {
                             log("User profile found.");
                             setIsUserInitialized(true); // Mark as initialized
-                            // <-- MODIFIED: Call the reusable fetch function -->
-                            fetchAndUpdateUserState();
+                            // <-- MODIFIED: Call the reusable fetch function, passing the derived pda -->
+                            fetchAndUpdateUserState(pda);
                         }
                     })
                     .catch(error => {
