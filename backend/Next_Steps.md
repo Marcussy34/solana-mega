@@ -29,15 +29,15 @@ This document outlines the planned implementation phases for the core SkillStrea
 3.  **Implement `early_withdraw` Instruction:**
     *   **Instruction:** `fn early_withdraw(ctx: Context<EarlyWithdraw>) -> Result<()>`
     *   **Accounts (`EarlyWithdraw` struct):** Similar to `Withdraw`, but add:
-        *   `treasury_pda: AccountInfo<'info>` (Treasury PDA)
-        *   `treasury_token_account: Account<'info, TokenAccount>` (mut, Treasury's ATA)
+        *   `treasury_token_account: Account<'info, TokenAccount>` (mut, **ATA for fixed platform wallet**: `6R651eq74BXg8zeQEaGX8Fm25z1N8YDqWodv3S9kUFnn`)
     *   **Logic:**
         *   Check if the lock-in period *hasn't* ended. Fail if it has (user should use `withdraw`).
-        *   Calculate the 5% early exit fee based on `user_state.deposit_amount`.
-        *   Perform CPI `token::transfer` for the fee amount from `vault_token_account` to `treasury_token_account` (using Vault PDA signer).
-        *   Calculate remaining amount (`deposit_amount` + `accrued_yield` - fee).
-        *   Perform CPI `token::transfer` for the remaining amount from `vault_token_account` to `user_token_account` (using Vault PDA signer).
-        *   Optionally: Close or reset `user_state`.
+        *   Calculate the **50% early exit forfeiture**:  
+            `penalty = 50% of user_state.deposit_amount`.
+        *   Transfer **penalty amount** from `vault_token_account` to `treasury_token_account` (the platform wallet) using the Vault PDA signer.
+        *   Transfer the **remaining 50%** of `deposit_amount` plus any `accrued_yield` to `user_token_account`, also signed by the Vault PDA.
+        *   Optionally: Close or reset `user_state` to reclaim rent.
+        *   Emit an event (`EarlyWithdrawEvent`) with fields like `user`, `penalty_amount`, `withdrawn_amount`, `timestamp`.
 
 4.  **Add `accrued_yield` Field:**
     *   Add `pub accrued_yield: u64` to the `UserState` struct. Initialize to 0 in `create_user_state`.

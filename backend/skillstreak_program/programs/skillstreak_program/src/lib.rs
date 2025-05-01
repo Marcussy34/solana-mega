@@ -10,6 +10,19 @@ declare_id!("yGBcgEFAAjnmNN479KeCk939BDTE1kuLAdbbWdpHMvp");
 pub const USER_SEED: &[u8] = b"user";
 pub const VAULT_SEED: &[u8] = b"vault";
 
+// Treasury wallet address (6R651eq74BXg8zeQEaGX8Fm25z1N8YDqWodv3S9kUFnn)
+pub const TREASURY_WALLET_BYTES: [u8; 32] = [
+    106, 82, 54, 49, 101, 113, 55, 52, 
+    66, 88, 103, 56, 122, 101, 81, 69, 
+    97, 71, 88, 56, 70, 109, 50, 53, 
+    122, 49, 78, 56, 89, 68, 113, 87
+];
+
+// Helper function to get treasury wallet pubkey
+pub fn treasury_wallet() -> Pubkey {
+    Pubkey::new_from_array(TREASURY_WALLET_BYTES)
+}
+
 #[program]
 pub mod skillstreak_program {
     use super::*;
@@ -29,6 +42,7 @@ pub mod skillstreak_program {
         user_state.deposit_timestamp = 0; // No deposit yet
         user_state.last_task_timestamp = 0;
         user_state.lock_in_end_timestamp = 0; // No lock-in yet
+        user_state.accrued_yield = 0; // Initialize yield to 0
 
         msg!("User state account created.");
         msg!(" User: {}", user_state.user);
@@ -68,14 +82,20 @@ pub mod skillstreak_program {
         let current_timestamp = clock.unix_timestamp;
 
         // Add to the existing deposit amount
-        user_state.deposit_amount = user_state.deposit_amount.checked_add(deposit_amount).unwrap(); // Consider error handling for overflow
+        user_state.deposit_amount = user_state.deposit_amount
+            .checked_add(deposit_amount)
+            .ok_or(ErrorCode::ArithmeticError)?;
 
         // Update deposit timestamp
         user_state.deposit_timestamp = current_timestamp;
 
         // Calculate new lock-in end time based on current time + new duration
-        let lock_in_seconds = lock_in_duration_days.checked_mul(24 * 60 * 60).unwrap(); // Consider error handling
-        user_state.lock_in_end_timestamp = current_timestamp.checked_add(lock_in_seconds as i64).unwrap(); // Consider error handling
+        let lock_in_seconds = lock_in_duration_days
+            .checked_mul(24 * 60 * 60)
+            .ok_or(ErrorCode::ArithmeticError)?;
+        user_state.lock_in_end_timestamp = current_timestamp
+            .checked_add(lock_in_seconds as i64)
+            .ok_or(ErrorCode::ArithmeticError)?;
 
         // We don't update initial_deposit_amount, current_streak, miss_count, or last_task_timestamp here
 
@@ -83,6 +103,102 @@ pub mod skillstreak_program {
         msg!("  New Total Deposit: {}", user_state.deposit_amount);
         msg!("  New Lock-in Ends At: {}", user_state.lock_in_end_timestamp);
 
+        Ok(())
+    }
+
+    pub fn withdraw(ctx: Context<Withdraw>) -> Result<()> {
+        let user_state = &mut ctx.accounts.user_state;
+        let clock = Clock::get()?;
+        
+        // Check if lock-in period has ended
+        if clock.unix_timestamp < user_state.lock_in_end_timestamp {
+            return err!(ErrorCode::LockInPeriodNotEnded);
+        }
+
+        // Calculate total amount to withdraw (deposit + yield)
+        let total_amount = user_state.deposit_amount
+            .checked_add(user_state.accrued_yield)
+            .ok_or(ErrorCode::ArithmeticError)?;
+
+        // Transfer tokens from vault to user
+        let seeds = &[VAULT_SEED, &[ctx.bumps.vault]];
+        let signer = &[&seeds[..]];
+        
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.vault_token_account.to_account_info(),
+            to: ctx.accounts.user_token_account.to_account_info(),
+            authority: ctx.accounts.vault.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        token::transfer(cpi_ctx, total_amount)?;
+
+        // Reset user state values
+        user_state.deposit_amount = 0;
+        user_state.accrued_yield = 0;
+        user_state.lock_in_end_timestamp = 0;
+
+        msg!("Withdrawn {} tokens to user", total_amount);
+        Ok(())
+    }
+
+    pub fn early_withdraw(ctx: Context<EarlyWithdraw>) -> Result<()> {
+        let user_state = &mut ctx.accounts.user_state;
+        let clock = Clock::get()?;
+        
+        // Check if lock-in period hasn't ended
+        if clock.unix_timestamp >= user_state.lock_in_end_timestamp {
+            return err!(ErrorCode::LockInPeriodEnded);
+        }
+
+        // Calculate penalty (50% of deposit)
+        let penalty_amount = user_state.deposit_amount
+            .checked_div(2)
+            .ok_or(ErrorCode::ArithmeticError)?;
+        
+        // Calculate amount to return to user (50% of deposit + all yield)
+        let return_amount = user_state.deposit_amount
+            .checked_sub(penalty_amount)
+            .ok_or(ErrorCode::ArithmeticError)?
+            .checked_add(user_state.accrued_yield)
+            .ok_or(ErrorCode::ArithmeticError)?;
+
+        let vault_seeds = &[VAULT_SEED, &[ctx.bumps.vault]];
+        let vault_signer = &[&vault_seeds[..]];
+
+        // Transfer penalty to treasury wallet's ATA
+        {
+            let cpi_accounts = Transfer {
+                from: ctx.accounts.vault_token_account.to_account_info(),
+                to: ctx.accounts.treasury_token_account.to_account_info(),
+                authority: ctx.accounts.vault.to_account_info(),
+            };
+            let cpi_program = ctx.accounts.token_program.to_account_info();
+            let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, vault_signer);
+            token::transfer(cpi_ctx, penalty_amount)?;
+        }
+
+        // Transfer remaining amount to user
+        {
+            let cpi_accounts = Transfer {
+                from: ctx.accounts.vault_token_account.to_account_info(),
+                to: ctx.accounts.user_token_account.to_account_info(),
+                authority: ctx.accounts.vault.to_account_info(),
+            };
+            let cpi_program = ctx.accounts.token_program.to_account_info();
+            let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, vault_signer);
+            token::transfer(cpi_ctx, return_amount)?;
+        }
+
+        // Reset user state values
+        user_state.deposit_amount = 0;
+        user_state.accrued_yield = 0;
+        user_state.lock_in_end_timestamp = 0;
+
+        msg!("Early withdrawal completed:");
+        msg!("  Penalty sent to treasury wallet: {}", penalty_amount);
+        msg!("  Amount returned to user: {}", return_amount);
+        
         Ok(())
     }
 }
@@ -143,6 +259,7 @@ pub struct UserState {
     pub deposit_timestamp: i64,
     pub last_task_timestamp: i64,
     pub lock_in_end_timestamp: i64,
+    pub accrued_yield: u64,  // Added for yield tracking
 }
 
 // --- Create User State Accounts Struct ---
@@ -167,10 +284,106 @@ pub struct CreateUserState<'info> {
     pub system_program: Program<'info, System>,
 }
 
+#[account]
+#[derive(InitSpace)]
+pub struct TreasuryState {
+    pub authority: Pubkey,  // Authority that can withdraw from treasury
+    pub total_fees_collected: u64,  // Track total fees collected
+}
+
 // Optional: Define Custom Errors
 #[error_code]
 pub enum ErrorCode {
     #[msg("Deposit amount cannot be zero.")]
     ZeroDepositAmount,
+    #[msg("Lock-in period has not ended yet.")]
+    LockInPeriodNotEnded,
+    #[msg("Lock-in period has already ended. Use normal withdraw.")]
+    LockInPeriodEnded,
+    #[msg("An arithmetic operation failed (overflow/underflow/divide by zero).")]
+    ArithmeticError,
     // Add other potential errors here
+}
+
+#[derive(Accounts)]
+pub struct Withdraw<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [USER_SEED, user.key().as_ref()],
+        bump,
+        constraint = user_state.user == user.key(),
+    )]
+    pub user_state: Account<'info, UserState>,
+
+    #[account(
+        mut,
+        constraint = user_token_account.mint == usdc_mint.key(),
+        constraint = user_token_account.owner == user.key()
+    )]
+    pub user_token_account: Account<'info, TokenAccount>,
+
+    /// CHECK: Vault PDA is safe because it's derived from a known seed and verified by token account authority
+    #[account(
+        seeds = [VAULT_SEED],
+        bump
+    )]
+    pub vault: AccountInfo<'info>,
+
+    #[account(
+        mut,
+        associated_token::mint = usdc_mint,
+        associated_token::authority = vault,
+    )]
+    pub vault_token_account: Account<'info, TokenAccount>,
+
+    pub usdc_mint: Account<'info, Mint>,
+    pub token_program: Program<'info, Token>,
+}
+
+#[derive(Accounts)]
+pub struct EarlyWithdraw<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [USER_SEED, user.key().as_ref()],
+        bump,
+        constraint = user_state.user == user.key(),
+    )]
+    pub user_state: Account<'info, UserState>,
+
+    #[account(
+        mut,
+        constraint = user_token_account.mint == usdc_mint.key(),
+        constraint = user_token_account.owner == user.key()
+    )]
+    pub user_token_account: Account<'info, TokenAccount>,
+
+    /// CHECK: Vault PDA is safe because it's derived from a known seed and verified by token account authority
+    #[account(
+        seeds = [VAULT_SEED],
+        bump
+    )]
+    pub vault: AccountInfo<'info>,
+
+    #[account(
+        mut,
+        associated_token::mint = usdc_mint,
+        associated_token::authority = vault,
+    )]
+    pub vault_token_account: Account<'info, TokenAccount>,
+
+    #[account(
+        mut,
+        constraint = treasury_token_account.mint == usdc_mint.key(),
+        constraint = treasury_token_account.owner == treasury_wallet()
+    )]
+    pub treasury_token_account: Account<'info, TokenAccount>,
+
+    pub usdc_mint: Account<'info, Mint>,
+    pub token_program: Program<'info, Token>,
 }
