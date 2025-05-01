@@ -2,118 +2,146 @@
 
 This document outlines the planned implementation phases for the core SkillStreak Solana program (`skillstreak_program`).
 
-## Phase 1: Core Withdrawal Functionality
+---
 
-**Goal:** Allow users to retrieve their deposited funds according to the rules (maturity or early exit).
+## Phase 1: Core Deposit & Withdrawal Functionality
 
-1.  **Define `TreasuryState` Account:**
-    *   Create a simple state account (likely a PDA using a `TREASURY_SEED`) to hold collected fees. Initially, it might just store the authority or be an empty account associated with a token account.
-    *   Define a corresponding `TreasuryTokenAccount` (ATA) associated with the `Treasury` PDA to hold USDC fees.
+**Goal:** Allow users to deposit funds into the platform, and later withdraw them according to maturity rules.
 
-2.  **Implement `withdraw` Instruction:**
-    *   **Instruction:** `fn withdraw(ctx: Context<Withdraw>) -> Result<()>`
-    *   **Accounts (`Withdraw` struct):**
-        *   `user: Signer<'info>`
-        *   `user_state: Account<'info, UserState>` (mut)
-        *   `user_token_account: Account<'info, TokenAccount>` (mut)
-        *   `vault: AccountInfo<'info>` (vault PDA, needed for signing)
-        *   `vault_token_account: Account<'info, TokenAccount>` (mut)
-        *   `usdc_mint: Account<'info, Mint>`
-        *   `token_program: Program<'info, Token>`
-    *   **Logic:**
-        *   Check `user_state.lock_in_end_timestamp` against `Clock::get()?.unix_timestamp`. Fail if not matured.
-        *   Calculate amount to return (`user_state.deposit_amount` + `user_state.accrued_yield` - initially yield is 0).
-        *   Perform CPI `token::transfer` from `vault_token_account` to `user_token_account`. Requires PDA signer seeds (`VAULT_SEED`).
-        *   Optionally: Close the `user_state` account (`close = user`) or reset its values.
+1. **Implement `deposit` Instruction (Already Done):**
+   * Allows users to deposit tokens without starting the lock-in or streak yet.
+   * Initializes `user_state.deposit_amount`, but leaves `lock_in_end_timestamp = 0` and `initial_deposit_amount = 0`.
 
-3.  **Implement `early_withdraw` Instruction:**
-    *   **Instruction:** `fn early_withdraw(ctx: Context<EarlyWithdraw>) -> Result<()>`
-    *   **Accounts (`EarlyWithdraw` struct):** Similar to `Withdraw`, but add:
-        *   `treasury_token_account: Account<'info, TokenAccount>` (mut, **ATA for fixed platform wallet**: `6R651eq74BXg8zeQEaGX8Fm25z1N8YDqWodv3S9kUFnn`)
-    *   **Logic:**
-        *   Check if the lock-in period *hasn't* ended. Fail if it has (user should use `withdraw`).
-        *   Calculate the **50% early exit forfeiture**:  
-            `penalty = 50% of user_state.deposit_amount`.
-        *   Transfer **penalty amount** from `vault_token_account` to `treasury_token_account` (the platform wallet) using the Vault PDA signer.
-        *   Transfer the **remaining 50%** of `deposit_amount` plus any `accrued_yield` to `user_token_account`, also signed by the Vault PDA.
-        *   Optionally: Close or reset `user_state` to reclaim rent.
-        *   Emit an event (`EarlyWithdrawEvent`) with fields like `user`, `penalty_amount`, `withdrawn_amount`, `timestamp`.
+2. **Add `start_course` Instruction:**
+   * **Instruction:** `fn start_course(ctx: Context<StartCourse>, lock_in_duration_days: u64) -> Result<()>`
+   * **Accounts (`StartCourse` struct):**
+     * `user: Signer<'info>`
+     * `user_state: Account<'info, UserState>` (mut)
+   * **Logic:**
+     * Only allowed if `lock_in_end_timestamp == 0` (i.e., lock-in hasn't started yet).
+     * Set `initial_deposit_amount = deposit_amount`
+     * Set `deposit_timestamp = now`
+     * Set `lock_in_end_timestamp = now + lock_in_duration_days * seconds`
+     * Set `last_task_timestamp = now` (starts streak timer)
+     * Reset `current_streak` and `miss_count` to 0
 
-4.  **Add `accrued_yield` Field:**
-    *   Add `pub accrued_yield: u64` to the `UserState` struct. Initialize to 0 in `create_user_state`.
+3. **Implement `withdraw` Instruction:**
+   * **Instruction:** `fn withdraw(ctx: Context<Withdraw>) -> Result<()>`
+   * **Accounts:** `user`, `user_state`, `vault_token_account`, etc.
+   * **Logic:**
+     * Validate lock-in has ended (`now >= lock_in_end_timestamp`)
+     * Transfer `deposit_amount + accrued_yield` back to user
+     * Reset or close user state
+
+4. **Implement `early_withdraw` Instruction:**
+   * **Instruction:** `fn early_withdraw(ctx: Context<EarlyWithdraw>) -> Result<()>`
+   * **Accounts:** Same as `withdraw`, plus `treasury_token_account`
+   * **Logic:**
+     * Enforce lock-in is still active
+     * Transfer 50% penalty to treasury, rest to user
+     * Reset or close user state
+     * Emit `EarlyWithdrawEvent`
+
+5. **Add `accrued_yield` Field:**
+   * Track earned yield in `UserState`. Initially 0.
+
+---
 
 ## Phase 2: Streak & Task Tracking
 
-**Goal:** Implement the core mechanism for users to maintain their streaks.
+**Goal:** Track user task completion streaks once a course has started.
 
-1.  **Implement `record_task` Instruction:**
-    *   **Instruction:** `fn record_task(ctx: Context<RecordTask>) -> Result<()>`
-    *   **Accounts (`RecordTask` struct):**
-        *   `user: Signer<'info>`
-        *   `user_state: Account<'info, UserState>` (mut)
-    *   **Logic:**
-        *   Get `current_timestamp = Clock::get()?.unix_timestamp`.
-        *   Check if `current_timestamp` is within the allowed window since `user_state.last_task_timestamp` (e.g., within 24-36 hours, depending on exact rules). Fail if too early or too late.
-        *   Update `user_state.last_task_timestamp = current_timestamp`.
-        *   Increment `user_state.current_streak`.
-        *   Optional: Reset `user_state.miss_count` if rules dictate.
+1. **Implement `record_task` Instruction:**
+   * **Instruction:** `fn record_task(ctx: Context<RecordTask>) -> Result<()>`
+   * **Accounts:** `user`, `user_state`
+   * **Logic:**
+     * Use `Clock::get()?.unix_timestamp`
+     * If `last_task_timestamp != 0`, validate window (e.g., 24–36 hours)
+     * If valid: update `last_task_timestamp`, increment `current_streak`
+     * If missed window: return error or let `record_miss` handle it
 
-## Phase 3: Penalty Buffer & Application
+---
 
-**Goal:** Implement the penalty mechanism for missing tasks.
+## Phase 3: Penalty Buffer & Miss Handling
 
-1.  **Refine `UserState` for Penalties:**
-    *   Decide how to track the penalty buffer. Options:
-        *   Add `pub penalty_buffer: u64` to `UserState`. Requires adjusting `deposit` to split funds.
-        *   Calculate buffer availability dynamically based on `deposit_amount` and `miss_count` when a penalty occurs. (Simpler state, more complex logic).
-    *   Ensure `initial_deposit_amount` is set correctly during the *first* deposit, perhaps by adding a check in `deposit` or a separate `initialize_deposit` instruction. This is needed for percentage calculations.
+**Goal:** Penalize users for missing tasks based on their miss count and deposit size.
 
-2.  **Implement `record_miss` Instruction (or integrate into daily check):**
-    *   **Instruction:** `fn record_miss(ctx: Context<RecordMiss>) -> Result<()>` (Could be invoked by an off-chain service).
-    *   **Accounts (`RecordMiss` struct):**
-        *   `authority: Signer<'info>` (Could be a trusted off-chain service key or the user themselves if self-reporting)
-        *   `user_state: Account<'info, UserState>` (mut)
-        *   Maybe `treasury_pda`, `treasury_token_account` if penalties involve immediate transfers.
-        *   Maybe `vault`, `vault_token_account` if deducting principal.
-    *   **Logic:**
-        *   Increment `user_state.miss_count`.
-        *   Reset `user_state.current_streak` to 0.
-        *   Based on the new `miss_count`:
-            *   **Misses 1-3:** Calculate top-up percentage (10%, 20%, 30%) of `initial_deposit_amount`. Determine if buffer is sufficient or if principal deduction is needed. Update `deposit_amount` (decrease for penalty, increase for user's share). Transfer treasury share (requires vault signing).
-            *   **Misses 4+:** Calculate principal deduction (20-30%). Decrease `user_state.deposit_amount`. Transfer deduction to treasury (requires vault signing). Implement logic to halve APR multiplier (add `apr_multiplier: u64` field to `UserState`?).
+1. **Refine `UserState` to Support Penalties:**
+   * Optionally add `penalty_buffer: u64`
+   * Set `initial_deposit_amount` in `start_course`
+   * Track streak-dependent deductions without draining full deposit immediately
 
-## Phase 4: Yield Generation & Distribution (Simulation First)
+2. **Implement `record_miss` Instruction:**
+   * **Instruction:** `fn record_miss(ctx: Context<RecordMiss>) -> Result<()>`
+   * **Accounts:** `authority`, `user_state`, possibly treasury/vault
+   * **Logic:**
+     * Increment `miss_count`, reset `current_streak`
+     * For miss counts 1–3:
+       * Deduct 10/20/30% of `initial_deposit_amount`
+       * Use `penalty_buffer` first, then fallback to `deposit_amount`
+       * Transfer penalty portion to `treasury_token_account`
+     * For 4+:
+       * Heavier deduction (20–30%)
+       * Possibly reduce APR by updating `apr_multiplier` field
 
-**Goal:** Simulate or integrate actual yield generation.
+---
 
-1.  **Simulated Yield:**
-    *   Implement a simple `distribute_yield` instruction (callable by an authority).
-    *   Logic: Iterate through users (difficult on-chain) or have users claim yield. For MVP, maybe just add a fixed amount to `user_state.accrued_yield` for testing `withdraw`.
+## Phase 4: Yield Generation & Simulation
 
-2.  **DeFi Integration (Future):**
-    *   Add placeholder instructions/accounts for CPI calls (`deposit_to_kamino`, `withdraw_from_kamino`, `harvest_kamino_yield`).
-    *   Integrate external SDKs/structs for target protocols.
-    *   Implement logic to manage pooled funds and track protocol-specific positions/LP tokens within the vault's state (requires adding fields to a `VaultState` account).
+**Goal:** Support basic yield accumulation and simulate future DeFi integration.
 
-## Phase 5: Off-Chain Integration Points
+1. **Simulate Yield via `distribute_yield` Instruction:**
+   * Called by authority
+   * Adds a fixed amount to `user_state.accrued_yield` for testing
 
-**Goal:** Define instructions specifically designed to be triggered by external schedulers.
+2. **Prepare for DeFi Integration (Future):**
+   * Scaffold instructions for:
+     * `deposit_to_kamino`
+     * `withdraw_from_kamino`
+     * `harvest_kamino_yield`
+   * Create `VaultState` to hold external position metadata
 
-1.  **`daily_check` Instruction:**
-    *   Potentially combine task validation and miss recording.
-    *   Called by Cron/Clockwork/Snowflake per user.
-    *   Checks if `last_task_timestamp` is recent enough. If yes, do nothing or update state. If no, call `record_miss` logic internally.
+---
 
-2.  **`harvest_and_distribute` Instruction:**
-    *   Called periodically by Cron/etc. (USE node-cron)
-    *   Performs CPI calls to `harvest()` on integrated DeFi protocols.
-    *   Updates internal `accrued_yield` tracking (maybe pool-based before distribution).
+## Phase 5: Off-Chain Automation & Cron Jobs
 
-## Phase 6: Refinements & Error Handling
+**Goal:** Enable time-based checks and penalty enforcement via off-chain triggers.
 
-**Goal:** Improve robustness and clarity.
+1. **Implement `daily_check`:**
+   * Callable by Cron/Snowflake
+   * Verifies whether user missed their streak window
+   * Calls `record_miss` if applicable
 
-1.  **Robust Arithmetic:** Use `checked_add`, `checked_sub`, `checked_mul` consistently for all calculations involving user funds, timestamps, etc., returning custom errors on overflow.
-2.  **Comprehensive Error Codes:** Define more specific `ErrorCode` variants for different failure conditions (e.g., `LockInNotEnded`, `InsufficientFundsForPenalty`, `TimestampError`, `ArithmeticOverflow`).
-3.  **Code Comments:** Add detailed comments explaining the logic within instructions and the purpose of state fields.
-4.  **Testing:** Write thorough integration tests (`tests/skillstreak_program.ts`) covering all instructions and edge cases.
+2. **Implement `harvest_and_distribute`:**
+   * Periodically harvests yield from DeFi protocols
+   * Updates internal accounting or distributes yield proportionally
+
+---
+
+## Phase 6: Final Refinements & Testing
+
+**Goal:** Harden the program for safety, clarity, and maintainability.
+
+1. **Safe Math Everywhere:**
+   * Use `checked_add`, `checked_sub`, `checked_mul` to avoid overflows
+
+2. **Define Detailed Error Codes:**
+   * Add custom `ErrorCode` variants:
+     * `CourseAlreadyStarted`
+     * `TaskTooEarly`
+     * `TaskTooLate`
+     * `InsufficientPenaltyBuffer`, etc.
+
+3. **Improve Documentation:**
+   * Add inline comments explaining each field and logic path
+
+4. **Write Integration Tests:**
+   * Validate all major flows: deposit, start, streak, miss, early withdraw, full withdraw
+
+---
+
+✅ With this revised structure, your protocol supports:
+- Delayed course start
+- True streak-based accountability
+- Time-window enforcement
+- Financial penalties for inconsistency

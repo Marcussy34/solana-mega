@@ -39,14 +39,16 @@ export default function TestPage() {
     const [program, setProgram] = useState(null);
     // Renamed stake state variables to deposit
     const [depositAmount, setDepositAmount] = useState('0.5'); // Default 0.5 USDC for depositing
-    const [depositLockInDays, setDepositLockInDays] = useState('30'); // Default 30 days for depositing
+    // const [depositLockInDays, setDepositLockInDays] = useState('30'); // REMOVED: Lock-in handled by start_course now
+    const [startCourseLockInDays, setStartCourseLockInDays] = useState('30'); // ADDED: State for start_course lock-in input
     const [logs, setLogs] = useState([]);
     const [txSig, setTxSig] = useState('');
     const [isLoading, setIsLoading] = useState(false); // Tracks loading for *any* transaction
     const [isClient, setIsClient] = useState(false);
     const [isUserInitialized, setIsUserInitialized] = useState(null); // null: checking, false: needs creation, true: exists/created
     const [userStatePDA, setUserStatePDA] = useState(null); // Store the PDA for potential future use
-    const [userDepositAmount, setUserDepositAmount] = useState(null); // <-- ADDED: State to store the fetched deposit amount
+    // const [userDepositAmount, setUserDepositAmount] = useState(null); // REMOVED: Replaced by userStateDetails
+    const [userStateDetails, setUserStateDetails] = useState(null); // ADDED: State to store the full fetched user state
 
     // Ensure component only renders UI that depends on client state after mounting
     useEffect(() => {
@@ -90,21 +92,23 @@ export default function TestPage() {
         const pdaToUse = pdaOverride || userStatePDA;
         if (!program || !publicKey || !pdaToUse) {
             log(`Cannot fetch user state: prerequisites missing (program: ${!!program}, publicKey: ${!!publicKey}, pdaToUse: ${!!pdaToUse}).`);
-            setUserDepositAmount(null); // Ensure display resets if prerequisites lost
+            setUserStateDetails(null); // Ensure display resets if prerequisites lost
             return;
         }
         log(`Fetching user state data using PDA: ${pdaToUse.toBase58()}`);
         try {
-            const fetchedState = await program.account.userState.fetch(pdaToUse, 'confirmed');
-            const depositUiAmount = fetchedState.depositAmount.toNumber() / 1_000_000; // Assuming 6 decimals for USDC
-            log(`Fetched deposit amount (raw): ${fetchedState.depositAmount.toString()}, UI amount: ${depositUiAmount}`);
-            setUserDepositAmount(depositUiAmount); // Update the state
-        } catch (fetchError) {
-            log(`Error fetching user state details: ${fetchError.message}`);
-            console.error("User State Fetch Error:", fetchError);
-            setUserDepositAmount(null); // Ensure it's null on error
-        }
-    };
+             const fetchedState = await program.account.userState.fetch(pdaToUse, 'confirmed');
+             log('Fetched User State:', JSON.stringify(fetchedState, (key, value) =>
+                 typeof value === 'bigint' ? value.toString() : value // Convert BN/BigInt to string for logging
+             , 2));
+             // Store the whole state object
+             setUserStateDetails(fetchedState);
+         } catch (fetchError) {
+             log(`Error fetching user state details: ${fetchError.message}`);
+             console.error("User State Fetch Error:", fetchError);
+             setUserStateDetails(null); // Ensure it's null on error
+         }
+     };
 
     // --- Handler to Create User State PDA (if needed) ---
     const handleCreateUserState = async (pdaForCreation) => {
@@ -161,7 +165,7 @@ export default function TestPage() {
 
             log('User profile created successfully.');
             setIsUserInitialized(true); // <-- Set state to true upon success
-            fetchAndUpdateUserState(); // <-- ADDED: Fetch initial state after creation
+            fetchAndUpdateUserState(pdaForCreation); // Fetch initial state after creation, passing the newly created PDA
 
         } catch (error) {
             log('Error during profile creation:', error.message || JSON.stringify(error));
@@ -182,7 +186,7 @@ export default function TestPage() {
         // Only run if program, publicKey, and connection are available
         if (program && publicKey && connection) {
             setIsUserInitialized(null); // Set to loading state initially
-            setUserDepositAmount(null); // Reset deposit amount on re-check
+            setUserStateDetails(null); // Reset user details on re-check
             let derivedPDA = null; // Variable to hold derived PDA
 
             try {
@@ -231,7 +235,7 @@ export default function TestPage() {
             // Reset if disconnected or program not ready
             setIsUserInitialized(null);
             setUserStatePDA(null);
-            setUserDepositAmount(null); // <-- ADDED: Reset deposit amount
+            setUserStateDetails(null); // Reset user details
         }
     // IMPORTANT: Do NOT add handleCreateUserState to dependencies to avoid loops.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -249,15 +253,15 @@ export default function TestPage() {
         }
         // Basic input validation
         const depositAmountNum = parseFloat(depositAmount);
-        const depositLockInDaysNum = parseInt(depositLockInDays, 10);
-        if (isNaN(depositAmountNum) || depositAmountNum <= 0 || isNaN(depositLockInDaysNum) || depositLockInDaysNum <= 0) {
-            log('Error: Invalid deposit amount or lock-in days.');
+        // REMOVED: lock-in days validation, no longer part of deposit
+        if (isNaN(depositAmountNum) || depositAmountNum <= 0) {
+            log('Error: Invalid deposit amount.');
             return;
         }
 
         setIsLoading(true);
         setTxSig('');
-        log(`Attempting to deposit ${depositAmountNum} USDC for ${depositLockInDaysNum} days...`);
+        log(`Attempting to deposit ${depositAmountNum} USDC...`); // Removed lock-in days from log
 
         try {
             // --- 1. Derive PDAs and ATAs (reuse userStatePDA) ---
@@ -288,15 +292,15 @@ export default function TestPage() {
 
             // --- 2. Prepare Instruction Arguments ---
             const depositAmountLamports = new BN(depositAmountNum * 1_000_000); // Assuming 6 decimals for USDC
-            const depositLockInDaysBN = new BN(depositLockInDaysNum);
+            // REMOVED: depositLockInDaysBN
 
             log(`Deposit Amount (lamports): ${depositAmountLamports.toString()}`);
-            log(`Deposit Lock-in Days (BN): ${depositLockInDaysBN.toString()}`);
+            // REMOVED: log(`Deposit Lock-in Days (BN): ${depositLockInDaysBN.toString()}`);
 
             // --- 3. Build the deposit instruction transaction ---
             log("Building deposit transaction...");
             const depositTransaction = await program.methods
-                .deposit(depositAmountLamports, depositLockInDaysBN) // Renamed method call
+                .deposit(depositAmountLamports) // REMOVED depositLockInDaysBN
                 .accounts({
                     user: publicKey,
                     userTokenAccount: userUsdcAta,
@@ -376,6 +380,104 @@ export default function TestPage() {
         } catch (error) {
             log('Error during deposit:', error.message || JSON.stringify(error));
             console.error("Deposit Error:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // --- Handler for Starting the Course ---
+    const handleStartCourse = async () => {
+        if (!program || !publicKey || !connection || !wallet?.adapter || !userStatePDA) {
+            log('Error: Prerequisites missing for starting course (program, wallet, connection, user PDA).');
+            return;
+        }
+        // Basic input validation
+        const lockInDaysNum = parseInt(startCourseLockInDays, 10);
+        if (isNaN(lockInDaysNum) || lockInDaysNum <= 0) {
+            log('Error: Invalid lock-in days for starting course.');
+            return;
+        }
+
+        setIsLoading(true);
+        setTxSig('');
+        log(`Attempting to start course with lock-in of ${lockInDaysNum} days...`);
+
+        try {
+            // --- 1. Prepare Instruction Arguments ---
+            const lockInDaysBN = new BN(lockInDaysNum);
+            log(`Start Course Lock-in Days (BN): ${lockInDaysBN.toString()}`);
+
+            // --- 2. Build the start_course instruction transaction ---
+            log("Building start_course transaction...");
+            const startCourseTx = await program.methods
+                .startCourse(lockInDaysBN)
+                .accounts({
+                    user: publicKey,
+                    userState: userStatePDA, // Requires userState PDA
+                })
+                .transaction();
+
+            // --- 3. Set Fee Payer and Simulate ---
+            if (!startCourseTx.feePayer) {
+                startCourseTx.feePayer = publicKey;
+            }
+            log('Simulating start_course transaction...');
+            try {
+                const simulationResult = await connection.simulateTransaction(startCourseTx);
+                if (simulationResult.value.err) {
+                    log("Simulation Error (start_course):", simulationResult.value.err);
+                    log("Simulation Logs (start_course):", simulationResult.value.logs);
+                    // Attempt to parse program logs for custom errors
+                    const errorLogs = simulationResult.value.logs?.filter(l => l.includes('Program log: Error:'));
+                    if (errorLogs?.length > 0) {
+                        log("Parsed Program Error:", errorLogs.join('\\n'));
+                    }
+                    throw new Error(`Transaction simulation failed: ${simulationResult.value.err}`);
+                }
+                log("Transaction simulation successful (start_course).");
+            } catch (simError) {
+                log("Error during simulation (start_course):", simError);
+                if (simError.simulationLogs) {
+                    log("Simulation Logs (start_course) (from catch):", simError.simulationLogs);
+                }
+                 setIsLoading(false);
+                 return; // Stop if simulation fails
+            }
+
+            // --- 4. Send the transaction ---
+            log('Sending start_course transaction...');
+            const startCourseSig = await sendTransaction(startCourseTx, connection);
+            log('Start Course Transaction sent:', startCourseSig);
+            setTxSig(startCourseSig);
+
+            // --- 5. Confirm Transaction ---
+            log('Confirming start_course transaction...');
+            const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+            const confirmation = await connection.confirmTransaction({
+                signature: startCourseSig,
+                blockhash,
+                lastValidBlockHeight
+            }, 'confirmed');
+
+            if (confirmation.value.err) {
+                log('Start course transaction confirmation failed:', confirmation.value.err);
+                try {
+                    const txDetails = await connection.getTransaction(startCourseSig, {maxSupportedTransactionVersion: 0});
+                    if (txDetails?.meta?.logMessages) {
+                        log("Failed Start Course Transaction Logs:", txDetails.meta.logMessages.join('\\n'));
+                    }
+                } catch (logError) {
+                    log("Could not fetch logs for failed start_course transaction:", logError);
+                }
+                throw new Error(`Start course transaction failed: ${confirmation.value.err}`);
+            }
+
+            log('Start course transaction confirmed successfully.');
+            fetchAndUpdateUserState(); // Refresh user state after successful start
+
+        } catch (error) {
+            log('Error during start_course:', error.message || JSON.stringify(error));
+            console.error("Start Course Error:", error);
         } finally {
             setIsLoading(false);
         }
@@ -585,14 +687,27 @@ export default function TestPage() {
                     {isUserInitialized === true && (
                         <div style={{ marginTop: '30px', borderTop: '1px dashed #aaa', paddingTop: '20px' }}>
                              {/* Maybe add a clearer message that profile is ready */}
-                             <p style={{ color: 'green', fontWeight: 'bold' }}>User profile ready.</p>
-                             {/* --- ADDED: Display current deposit --- */}
-                             {userDepositAmount !== null ? (
-                                <p>Your Current Deposit: {userDepositAmount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 6 })} USDC</p>
+                             <p style={{ color: 'green', fontWeight: 'bold' }}>User profile initialized.</p>
+                             {/* --- MODIFIED: Display detailed user state --- */}
+                             {userStateDetails !== null ? (
+                                <div style={{ background: '#eee', padding: '10px', marginBottom: '15px', borderRadius: '5px' }}>
+                                    <h4>Your Current State:</h4>
+                                    <pre style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word', color: '#333' }}>
+                                        {`Deposit Amount: ${(userStateDetails.depositAmount.toNumber() / 1_000_000).toFixed(6)} USDC\\n`}
+                                        {`Initial Deposit: ${(userStateDetails.initialDepositAmount.toNumber() / 1_000_000).toFixed(6)} USDC\\n`}
+                                        {`Current Streak: ${userStateDetails.currentStreak.toString()}\\n`}
+                                        {`Miss Count: ${userStateDetails.missCount.toString()}\\n`}
+                                        {`Deposit Timestamp: ${userStateDetails.depositTimestamp.toNumber() ? new Date(userStateDetails.depositTimestamp.toNumber() * 1000).toLocaleString() : 'N/A'}\\n`}
+                                        {`Last Task Timestamp: ${userStateDetails.lastTaskTimestamp.toNumber() ? new Date(userStateDetails.lastTaskTimestamp.toNumber() * 1000).toLocaleString() : 'N/A'}\\n`}
+                                        {`Lock-in Ends: ${userStateDetails.lockInEndTimestamp.toNumber() ? new Date(userStateDetails.lockInEndTimestamp.toNumber() * 1000).toLocaleString() : 'Not Started'}\\n`}
+                                        {`Accrued Yield: ${(userStateDetails.accruedYield.toNumber() / 1_000_000).toFixed(6)} USDC`}
+                                    </pre>
+                                </div>
                              ) : (
-                                <p>Fetching current deposit...</p>
+                                <p>Fetching user state details...</p>
                              )}
-                             {/* --- END ADDED --- */}
+
+                            {/* --- Deposit Section (Only Deposit Amount) --- */}
                             <h2>Deposit Funds</h2>
                             {/* Deposit Amount Input */}
                             <div style={{ marginBottom: '10px' }}>
@@ -609,34 +724,48 @@ export default function TestPage() {
                                     />
                                 </label>
                             </div>
-                            {/* Lock-in Duration Input */}
-                            <div style={{ marginBottom: '10px' }}>
-                                <label>
-                                    Lock-in Duration (Days):{' '}
-                                    <input
-                                        type="number"
-                                        value={depositLockInDays} // Renamed state variable
-                                        onChange={(e) => setDepositLockInDays(e.target.value)} // Renamed state setter
-                                        min="1" // Assuming minimum 1 day lock for deposit too
-                                        step="1"
-                                        disabled={isLoading}
-                                        style={{ color: '#000000' }}
-                                    />
-                                </label>
-                            </div>
+                            {/* REMOVED: Lock-in Duration Input */}
                             {/* Deposit Button */}
-                            <div>
-                            <button onClick={handleDeposit} disabled={isLoading || !publicKey}> {/* Renamed onClick handler */}
-                                {isLoading ? 'Processing Deposit...' : 'Deposit Funds'} {/* Renamed button text */}
-                            </button>
+                            <div style={{ marginBottom: '10px' }}>
+                                <button onClick={handleDeposit} disabled={isLoading || !publicKey}>
+                                    {isLoading ? 'Processing Deposit...' : 'Deposit Funds'}
+                                </button>
+                            </div>
 
-                                {/* Withdraw Button - Added */}
+                            {/* --- Start Course Section (Conditional) --- */}
+                            {userStateDetails && userStateDetails.lockInEndTimestamp.toNumber() === 0 && userStateDetails.depositAmount.toNumber() > 0 && (
+                                <div style={{ marginTop: '20px', borderTop: '1px dashed #ccc', paddingTop: '15px' }}>
+                                    <h2>Start Course</h2>
+                                    <p>You have a deposit. Start the course to lock it in and begin tracking your streak.</p>
+                                    <div style={{ marginBottom: '10px' }}>
+                                        <label>
+                                            Lock-in Duration (Days):{' '}
+                                            <input
+                                                type="number"
+                                                value={startCourseLockInDays} // Use new state variable
+                                                onChange={(e) => setStartCourseLockInDays(e.target.value)} // Use new state setter
+                                                min="1"
+                                                step="1"
+                                                disabled={isLoading}
+                                                style={{ color: '#000000' }}
+                                            />
+                                        </label>
+                                    </div>
+                                    <button onClick={handleStartCourse} disabled={isLoading || !publicKey}>
+                                        {isLoading ? 'Starting Course...' : 'Start Course'}
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* --- Withdraw Section --- */}
+                            <div style={{ marginTop: '20px', borderTop: '1px dashed #ccc', paddingTop: '15px' }}>
+                                <h2>Withdraw Funds</h2>
+                                <p>Withdraw your funds (including yield) after the lock-in period ends, or withdraw early with a penalty.</p>
                                 <button
                                     onClick={handleWithdraw}
-                                    disabled={isLoading || !publicKey}
-                                    style={{ marginLeft: '10px' }} // Add some spacing
+                                    disabled={isLoading || !publicKey || !userStateDetails || userStateDetails.depositAmount.toNumber() === 0} // Disable if no deposit
                                 >
-                                    {isLoading ? 'Processing Withdrawal...' : 'Withdraw Funds'}
+                                    {isLoading ? 'Processing Withdrawal...' : 'Withdraw / Early Withdraw'}
                                 </button>
                             </div>
                         </div>
@@ -673,4 +802,4 @@ export default function TestPage() {
     );
 }
 // Added import for getAccount used in handleDeposit
-import { getAccount } from '@solana/spl-token'; 
+import { getAccount } from '@solana/spl-token';

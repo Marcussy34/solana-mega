@@ -51,15 +51,15 @@ pub mod skillstreak_program {
         Ok(())
     }
 
-    // --- Deposit Instruction (Renamed from Stake) ---
+    // --- Deposit Instruction (Phase 1 Modification) ---
+    // Allows users to deposit tokens without starting the lock-in or streak yet.
+    // Initializes user_state.deposit_amount.
     pub fn deposit(
         ctx: Context<Deposit>,
         deposit_amount: u64,
-        lock_in_duration_days: u64,
     ) -> Result<()> {
         msg!("Depositing funds for user: {}", ctx.accounts.user.key());
         msg!("Amount to deposit: {}", deposit_amount);
-        msg!("New lock-in duration (days): {}", lock_in_duration_days);
 
         // Ensure deposit amount is greater than zero
         if deposit_amount == 0 {
@@ -79,30 +79,17 @@ pub mod skillstreak_program {
 
         // --- 2. Update User State --- 
         let user_state = &mut ctx.accounts.user_state;
-        let clock = Clock::get()?;
-        let current_timestamp = clock.unix_timestamp;
 
         // Add to the existing deposit amount
         user_state.deposit_amount = user_state.deposit_amount
             .checked_add(deposit_amount)
             .ok_or(ErrorCode::ArithmeticError)?;
 
-        // Update deposit timestamp
-        user_state.deposit_timestamp = current_timestamp;
-
-        // Calculate new lock-in end time based on current time + new duration
-        let lock_in_seconds = lock_in_duration_days
-            .checked_mul(24 * 60 * 60)
-            .ok_or(ErrorCode::ArithmeticError)?;
-        user_state.lock_in_end_timestamp = current_timestamp
-            .checked_add(lock_in_seconds as i64)
-            .ok_or(ErrorCode::ArithmeticError)?;
-
         // We don't update initial_deposit_amount, current_streak, miss_count, or last_task_timestamp here
+        // Only the deposit_amount is updated.
 
         msg!("Updated User State:");
         msg!("  New Total Deposit: {}", user_state.deposit_amount);
-        msg!("  New Lock-in Ends At: {}", user_state.lock_in_end_timestamp);
 
         Ok(())
     }
@@ -202,10 +189,65 @@ pub mod skillstreak_program {
         
         Ok(())
     }
+
+    // --- Start Course Instruction (Phase 1) ---
+    // Sets the initial deposit amount, lock-in period, and starts the streak timer.
+    // This can only be called after a deposit has been made and before the course has started.
+    pub fn start_course(
+        ctx: Context<StartCourse>,
+        lock_in_duration_days: u64,
+    ) -> Result<()> {
+        msg!("Starting course for user: {}", ctx.accounts.user.key());
+        msg!("Lock-in duration (days): {}", lock_in_duration_days);
+
+        let user_state = &mut ctx.accounts.user_state;
+        let clock = Clock::get()?;
+        let current_timestamp = clock.unix_timestamp;
+
+        // Validation: Ensure course hasn't already started
+        if user_state.lock_in_end_timestamp != 0 {
+            return err!(ErrorCode::CourseAlreadyStarted);
+        }
+
+        // Validation: Ensure there is a deposit to lock in
+        if user_state.deposit_amount == 0 {
+            return err!(ErrorCode::NoDepositToStartCourse);
+        }
+
+        // --- Update User State for Course Start ---
+
+        // Set initial deposit amount based on the current deposit
+        user_state.initial_deposit_amount = user_state.deposit_amount;
+
+        // Set deposit timestamp (marks the official start)
+        user_state.deposit_timestamp = current_timestamp;
+
+        // Calculate and set lock-in end timestamp
+        let lock_in_seconds = lock_in_duration_days
+            .checked_mul(24 * 60 * 60) // seconds in a day
+            .ok_or(ErrorCode::ArithmeticError)?;
+        user_state.lock_in_end_timestamp = current_timestamp
+            .checked_add(lock_in_seconds as i64)
+            .ok_or(ErrorCode::ArithmeticError)?;
+
+        // Set last task timestamp to now, starting the streak timer
+        user_state.last_task_timestamp = current_timestamp;
+
+        // Reset streak and miss counts
+        user_state.current_streak = 0;
+        user_state.miss_count = 0;
+
+        msg!("Course started successfully.");
+        msg!("  Initial Deposit Locked: {}", user_state.initial_deposit_amount);
+        msg!("  Lock-in Ends At: {}", user_state.lock_in_end_timestamp);
+        msg!("  Streak Timer Started At: {}", user_state.last_task_timestamp);
+
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
-#[instruction(deposit_amount: u64, lock_in_duration_days: u64)]
+#[instruction(deposit_amount: u64)]
 pub struct Deposit<'info> {
     #[account(mut)]
     pub user: Signer<'info>,
@@ -303,6 +345,10 @@ pub enum ErrorCode {
     LockInPeriodEnded,
     #[msg("An arithmetic operation failed (overflow/underflow/divide by zero).")]
     ArithmeticError,
+    #[msg("Cannot start a course that has already begun.")]
+    CourseAlreadyStarted,
+    #[msg("Cannot start a course without an initial deposit.")]
+    NoDepositToStartCourse,
     // Add other potential errors here
 }
 
@@ -398,4 +444,23 @@ pub struct EarlyWithdraw<'info> {
     pub system_program: Program<'info, System>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub rent: Sysvar<'info, Rent>,
+}
+
+// --- Start Course Accounts Struct (Phase 1) ---
+// Defines the accounts needed for the start_course instruction.
+#[derive(Accounts)]
+#[instruction(lock_in_duration_days: u64)] // Instruction data
+pub struct StartCourse<'info> {
+    // The user starting the course.
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    // The user's state account, which will be modified.
+    #[account(
+        mut,
+        seeds = [USER_SEED, user.key().as_ref()],
+        bump,
+        constraint = user_state.user == user.key() // Ensure the state belongs to the signer
+    )]
+    pub user_state: Account<'info, UserState>,
 }
