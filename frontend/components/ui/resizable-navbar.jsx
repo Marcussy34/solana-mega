@@ -189,16 +189,20 @@ export const MobileNavToggle = ({
   );
 };
 
-export const NavbarLogo = () => {
+export const NavbarLogo = ({ asChild, children, className, ...props }) => {
   return (
-    <a
-      href="#"
-      className="relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal text-black">
-      <div className="rounded-full bg-emerald-500 w-8 h-8 flex items-center justify-center text-white font-bold">
-        S
-      </div>
-      <span className="font-medium text-black dark:text-white">SkillStreak</span>
-    </a>
+    <div
+      className={cn("relative z-20 mr-4 flex items-center space-x-2 px-2 py-1 text-sm font-normal text-black", className)}
+      {...props}>
+      {children || (
+        <>
+          <div className="rounded-full bg-emerald-500 w-8 h-8 flex items-center justify-center text-white font-bold">
+            S
+          </div>
+          <span className="font-medium text-black dark:text-white">SkillStreak</span>
+        </>
+      )}
+    </div>
   );
 };
 

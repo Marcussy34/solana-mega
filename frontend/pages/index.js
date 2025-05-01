@@ -29,9 +29,11 @@ export default function LandingPage() {
   });
 
   // Transform values for the 3D card animation
-  const rotate = useTransform(scrollYProgress, [0, 1], [25, -50]);
-  const scale = useTransform(scrollYProgress, [0, 1], [1.05, 1]);
-  const translate = useTransform(scrollYProgress, [0, 1], [0, -100]);
+  const rotate = useTransform(scrollYProgress, [0, 0.2], [35, -35]);
+  const scale = useTransform(scrollYProgress, [0, 0.8], [1.05, 1]);
+  const translate = useTransform(scrollYProgress, [0, 0.9], [0, -100]);
+
+
 
   // Navbar items
   const navItems = [
@@ -53,7 +55,7 @@ export default function LandingPage() {
       <Navbar className="top-0">
         <NavBody>
           <Link href="/">
-            <NavbarLogo />
+            <NavbarLogo asChild />
           </Link>
           <NavItems items={navItems} />
           <div className="relative z-20 flex flex-row items-center justify-end space-x-2">
@@ -68,7 +70,7 @@ export default function LandingPage() {
         <MobileNav>
           <MobileNavHeader>
             <Link href="/">
-              <NavbarLogo />
+              <NavbarLogo asChild />
             </Link>
             <MobileNavToggle isOpen={isOpen} onClick={() => setIsOpen(!isOpen)} />
           </MobileNavHeader>

@@ -20,12 +20,12 @@
     "@tabler/icons-react": "^3.31.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "framer-motion": "^12.7.4",
+    "framer-motion": "^10.16.4",
     "lucide-react": "^0.501.0",
-    "motion": "^12.9.2",
-    "next": "15.3.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "motion": "^10.16.4",
+    "next": "^13.5.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "tailwind-merge": "^3.2.0",
     "tailwindcss-animate": "^1.0.7"
   },
@@ -34,9 +34,15 @@
     "@tailwindcss/postcss": "^4",
     "autoprefixer": "^10.4.21",
     "eslint": "^9",
-    "eslint-config-next": "15.3.0",
+    "eslint-config-next": "^13.5.4",
     "magicui-cli": "^0.1.6",
     "postcss": "^8.5.3",
     "tailwindcss": "^3.4.17"
+  },
+  "resolutions": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "@fractalwagmi/solana-wallet-adapter/**/react": "^18.2.0",
+    "@fractalwagmi/solana-wallet-adapter/**/react-dom": "^18.2.0"
   }
 }
