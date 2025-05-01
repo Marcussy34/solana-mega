@@ -12,9 +12,10 @@ import {
   NavbarButton 
 } from "@/components/ui/resizable-navbar";
 import { ContainerScroll, Header, Card } from "@/components/ui/container-scroll-animation";
-import { CardContainer, CardBody, CardItem } from "@/components/magicui/3d-card";
+import { CardContainer, CardBody, CardItem } from "@/components/ui/3d-card";
 import { ThreeDMarquee } from "@/components/ui/3d-marquee";
 import { motion, useScroll, useTransform } from "framer-motion";
+import Link from "next/link";
 
 export default function LandingPage() {
   // State for mobile menu
@@ -51,7 +52,9 @@ export default function LandingPage() {
       {/* Resizable Navbar */}
       <Navbar className="top-0">
         <NavBody>
-          <NavbarLogo />
+          <Link href="/">
+            <NavbarLogo />
+          </Link>
           <NavItems items={navItems} />
           <div className="relative z-20 flex flex-row items-center justify-end space-x-2">
             <NavbarButton variant="secondary" href="#contact">
@@ -64,7 +67,9 @@ export default function LandingPage() {
         </NavBody>
         <MobileNav>
           <MobileNavHeader>
-            <NavbarLogo />
+            <Link href="/">
+              <NavbarLogo />
+            </Link>
             <MobileNavToggle isOpen={isOpen} onClick={() => setIsOpen(!isOpen)} />
           </MobileNavHeader>
           <MobileNavMenu isOpen={isOpen}>
@@ -155,106 +160,232 @@ export default function LandingPage() {
         </div>
       </div>
 
-      {/* 3D Card Section with Scroll Animation */}
-      <ContainerScroll
-        containerClassName="bg-gray-950 py-20"
-        className="container mx-auto px-4"
-        threshold={0.15}
-        speed={20}
-      >
-        <div className="flex flex-col md:flex-row items-center gap-12">
-          <div className="md:w-1/2">
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">
-              Build Valuable Skills While Earning
-            </h2>
-            <p className="text-xl text-gray-400 mb-8">
-              SkillStreak combines DeFi yield farming with skill development, creating a powerful incentive to learn consistently. Your capital works for you while you build valuable skills.
-            </p>
-            <ul className="space-y-4">
-              {["Earn yield on your deposits", "Build consistent learning habits", "Track your progress", "Connect with other learners"].map((item, i) => (
-                <li key={i} className="flex items-start">
-                  <span className="text-emerald-500 mr-3">✓</span>
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div className="md:w-1/2">
-            <CardContainer>
-              <CardBody className="bg-gray-900 relative group/card dark:hover:shadow-2xl dark:hover:shadow-emerald-500/[0.1] dark:bg-black dark:border-white/[0.2] border-black/[0.1] w-auto sm:w-[30rem] h-auto rounded-xl p-6 border">
-                <CardItem
-                  translateZ="50"
-                  className="text-xl font-bold text-neutral-300"
-                >
-                  Crypto Basics Track
-                </CardItem>
-                <CardItem
-                  as="p"
-                  translateZ="60"
-                  className="text-neutral-400 text-sm max-w-sm mt-2"
-                >
-                  Learn the fundamentals of blockchain, cryptocurrencies and Web3 technology
-                </CardItem>
-                <CardItem translateZ="100" className="w-full mt-4">
-                  <img
-                    src="https://images.unsplash.com/photo-1639322537228-f710d846310a?q=80&w=2232&auto=format&fit=crop&ixlib=rb-4.0.3"
-                    height="1000"
-                    width="1000"
-                    className="h-60 w-full object-cover rounded-xl group-hover/card:shadow-xl"
-                    alt="cryptocurrency"
-                  />
-                </CardItem>
-                <div className="flex justify-between items-center mt-6">
-                  <CardItem
-                    translateZ={40}
-                    as="button"
-                    className="px-4 py-2 rounded-xl text-xs font-normal bg-emerald-500/30 text-white"
-                  >
-                    Start Learning →
-                  </CardItem>
-                  <CardItem
-                    translateZ={40}
-                    className="px-4 py-2 rounded-xl text-xs font-normal text-white"
-                  >
-                    <span className="text-emerald-500 font-medium">4.2% APY</span> + Bonuses
-                  </CardItem>
-                </div>
-              </CardBody>
-            </CardContainer>
-          </div>
-        </div>
-      </ContainerScroll>
-
-      {/* Courses Section with 3D Marquee and Scroll Animation */}
-      <ContainerScroll
-        containerClassName="bg-gray-900 py-16"
-        className="w-full"
-        threshold={0.05}
-        speed={15}
-      >
-        <div className="container mx-auto px-4 mb-10">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6 text-center">
-            Explore Learning Tracks
+      {/* Get Started Section with 3D Cards */}
+      <section className="py-12 bg-black">
+        <div className="container mx-auto px-4">
+          <h2 className="text-4xl md:text-5xl mb-8 text-left tracking-wide">
+            Get Started On SkillStreak
           </h2>
-          <p className="text-xl text-gray-400 mb-8 text-center max-w-3xl mx-auto">
-            Choose from a variety of skill paths, each offering competitive yield rates and valuable knowledge.
-          </p>
-        </div>
-        <ThreeDMarquee images={images} className="max-w-7xl mx-auto" />
-      </ContainerScroll>
+          <div className="flex flex-col md:flex-row justify-between items-center gap-8">
+            {/* Card 1: Pick a Wallet */}
+            <div className="w-full md:w-1/3 mb-8 md:mb-0">
+              <Link href="/wallets" className="block w-full h-full">
+                <CardContainer className="w-full" containerClassName="!py-4 !w-full">
+                  <CardBody className="!w-full !h-[400px]">
+                    <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer"
+                      style={{
+                        background: "linear-gradient(145deg, #1a0f2b 0%, #32194f 50%, #4b2a80 100%)",
+                        boxShadow: "0 10px 30px rgba(75, 42, 128, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.05)"
+                      }}>
+                      
+                      {/* Hover brightness effect */}
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-5 pointer-events-none"
+                        style={{ 
+                          background: "linear-gradient(145deg, #2E184A 0%, #4A2D77 50%, #653AA9 100%)",
+                          mixBlendMode: "soft-light"
+                        }}>
+                      </div>
+                      
+                      {/* Metallic overlay with light reflections */}
+                      <div className="absolute inset-0 opacity-40 z-10 pointer-events-none"
+                        style={{ 
+                          background: "linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.05) 20%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.05) 80%, transparent 100%)"
+                        }}>
+                      </div>
+                      
+                      <div className="absolute inset-0 z-20 p-6">
+                        {/* Layout container */}
+                        <div className="relative w-full h-full flex flex-col justify-between">
+                          {/* Top section */}
+                          <div className="flex justify-end">
+                            {/* Icon in top right */}
+                            <CardItem
+                              translateZ={40}
+                              className="w-28 h-28 rounded-full flex items-center justify-center"
+                              style={{ 
+                                background: "linear-gradient(135deg, rgba(200,200,200,0.3) 0%, rgba(150,150,150,0.1) 100%)",
+                                boxShadow: "0 0 15px rgba(255,255,255,0.1), inset 0 0 20px rgba(255,255,255,0.03)"
+                              }}>
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-14 h-14 text-gray-200"
+                                style={{ filter: "drop-shadow(0 0 1px rgba(255,255,255,0.3))" }}>
+                                <rect x="2" y="6" width="20" height="12" rx="2" strokeWidth="1.5" />
+                                <path d="M22 10H18C16.9 10 16 10.9 16 12V12C16 13.1 16.9 14 18 14H22V10Z" strokeWidth="1.5" />
+                              </svg>
+                            </CardItem>
+                          </div>
+                          
+                          {/* Bottom section */}
+                          <div className="flex flex-col items-start">
+                            {/* Number badge above title, left aligned, oblong shaped */}
+                            <CardItem
+                              translateZ={20}
+                              className="bg-purple-500/80 text-white h-8 px-4 rounded-full flex items-center justify-center font-bold text-lg mb-2 group-hover:bg-purple-500">
+                              1
+                            </CardItem>
+                            
+                            {/* Title at bottom left */}
+                            <CardItem
+                              translateZ={50}
+                              className="text-3xl font-bold text-left text-white/85 group-hover:text-white">
+                              Pick a wallet
+                            </CardItem>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardBody>
+                </CardContainer>
+              </Link>
+            </div>
 
-      {/* CTA Section */}
-      <section className="py-20 bg-emerald-900">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-3xl md:text-4xl font-bold mb-6">
-            Ready to Start Your Learning Journey?
-          </h2>
-          <p className="text-xl mb-8 max-w-2xl mx-auto">
-            Join thousands of users who are building skills and earning rewards on SkillStreak.
-          </p>
-          <button className="bg-white text-emerald-900 hover:bg-gray-100 px-8 py-3 rounded-lg font-medium text-lg transition-colors duration-300">
-            Sign Up Now
-          </button>
+            {/* Card 2: Fund Account */}
+            <div className="w-full md:w-1/3 mb-8 md:mb-0">
+              <div className="cursor-pointer">
+                <CardContainer className="w-full" containerClassName="!py-4 !w-full">
+                  <CardBody className="!w-full !h-[400px]">
+                    <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer"
+                      style={{
+                        background: "linear-gradient(145deg, #061625 0%, #0d2945 50%, #153e6b 100%)",
+                        boxShadow: "0 10px 30px rgba(21, 62, 107, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.05)"
+                      }}>
+                      
+                      {/* Hover brightness effect */}
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-5 pointer-events-none"
+                        style={{ 
+                          background: "linear-gradient(145deg, #0a1f36 0%, #153965 50%, #20518c 100%)",
+                          mixBlendMode: "soft-light"
+                        }}>
+                      </div>
+                      
+                      {/* Metallic overlay with light reflections */}
+                      <div className="absolute inset-0 opacity-40 z-10 pointer-events-none"
+                        style={{ 
+                          background: "linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.05) 20%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.05) 80%, transparent 100%)"
+                        }}>
+                      </div>
+                      
+                      <div className="absolute inset-0 z-20 p-6">
+                        {/* Layout container */}
+                        <div className="relative w-full h-full flex flex-col justify-between">
+                          {/* Top section */}
+                          <div className="flex justify-end">
+                            {/* Icon in top right */}
+                            <CardItem
+                              translateZ={40}
+                              className="w-28 h-28 flex items-center justify-center">
+                              <div className="w-full h-full rotate-45" style={{ 
+                                boxShadow: "0 0 15px rgba(255,255,255,0.07)"
+                              }}>
+                                <div className="absolute inset-0 w-full h-full border-2 border-gray-300/30 rounded-lg" 
+                                  style={{ 
+                                    background: "linear-gradient(135deg, rgba(200,200,200,0.2) 0%, rgba(150,150,150,0.07) 100%)", 
+                                    boxShadow: "inset 0 0 10px rgba(255,255,255,0.03)" 
+                                  }}>
+                                </div>
+                                <div className="absolute inset-0 flex items-center justify-center -rotate-45">
+                                  <span className="text-gray-200/90 text-3xl font-bold group-hover:text-gray-200" 
+                                    style={{ textShadow: "0 0 5px rgba(255,255,255,0.1)" }}>
+                                    IP
+                                  </span>
+                                </div>
+                              </div>
+                            </CardItem>
+                          </div>
+                          
+                          {/* Bottom section */}
+                          <div className="flex flex-col items-start">
+                            {/* Number badge above title, left aligned, oblong shaped */}
+                            <CardItem
+                              translateZ={20}
+                              className="bg-blue-500/80 text-white h-8 px-4 rounded-full flex items-center justify-center font-bold text-lg mb-2 group-hover:bg-blue-500">
+                              2
+                            </CardItem>
+                            
+                            {/* Title at bottom left */}
+                            <CardItem
+                              translateZ={50}
+                              className="text-3xl font-bold text-left text-white/85 group-hover:text-white">
+                              Fund Account
+                            </CardItem>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardBody>
+                </CardContainer>
+              </div>
+            </div>
+
+            {/* Card 3: Explore Apps */}
+            <div className="w-full md:w-1/3">
+              <div className="cursor-pointer">
+                <CardContainer className="w-full" containerClassName="!py-4 !w-full">
+                  <CardBody className="!w-full !h-[400px]">
+                    <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer"
+                      style={{
+                        background: "linear-gradient(145deg, #3d2004 0%, #62340a 50%, #8c4c12 100%)",
+                        boxShadow: "0 10px 30px rgba(140, 76, 18, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.05)"
+                      }}>
+                      
+                      {/* Hover brightness effect */}
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-5 pointer-events-none"
+                        style={{ 
+                          background: "linear-gradient(145deg, #59300A 0%, #8B4B10 50%, #C26B18 100%)",
+                          mixBlendMode: "soft-light"
+                        }}>
+                      </div>
+                      
+                      {/* Metallic overlay with light reflections */}
+                      <div className="absolute inset-0 opacity-40 z-10 pointer-events-none"
+                        style={{ 
+                          background: "linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.05) 20%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.05) 80%, transparent 100%)"
+                        }}>
+                      </div>
+                      
+                      <div className="absolute inset-0 z-20 p-6">
+                        {/* Layout container */}
+                        <div className="relative w-full h-full flex flex-col justify-between">
+                          {/* Top section */}
+                          <div className="flex justify-end">
+                            {/* Icon in top right */}
+                            <CardItem
+                              translateZ={40}
+                              className="w-28 h-28 rounded-xl flex items-center justify-center"
+                              style={{ 
+                                background: "linear-gradient(135deg, rgba(200,200,200,0.3) 0%, rgba(150,150,150,0.1) 100%)",
+                                boxShadow: "0 0 15px rgba(255,255,255,0.1), inset 0 0 20px rgba(255,255,255,0.03)"
+                              }}>
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-14 h-14 text-gray-200/90 group-hover:text-gray-200"
+                                style={{ filter: "drop-shadow(0 0 1px rgba(255,255,255,0.3))" }}>
+                                <polygon points="5 3 19 12 5 21 5 3" strokeWidth="1.5" />
+                              </svg>
+                            </CardItem>
+                          </div>
+                          
+                          {/* Bottom section */}
+                          <div className="flex flex-col items-start">
+                            {/* Number badge above title, left aligned, oblong shaped */}
+                            <CardItem
+                              translateZ={20}
+                              className="bg-amber-500/80 text-white h-8 px-4 rounded-full flex items-center justify-center font-bold text-lg mb-2 group-hover:bg-amber-500">
+                              3
+                            </CardItem>
+                            
+                            {/* Title at bottom left */}
+                            <CardItem
+                              translateZ={50}
+                              className="text-3xl font-bold text-left text-white/85 group-hover:text-white">
+                              Explore Learning Tracks
+                            </CardItem>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardBody>
+                </CardContainer>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
