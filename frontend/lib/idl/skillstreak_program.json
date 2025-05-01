@@ -1,5 +1,5 @@
 {
-  "address": "yGBcgEFAAjnmNN479KeCk939BDTE1kuLAdbbWdpHMvp",
+  "address": "E6WVbAEb6v6ujmunXtMBpkdycZi9giBwCYKZDeHvqPiT",
   "metadata": {
     "name": "skillstreak_program",
     "version": "0.1.0",
@@ -227,10 +227,6 @@
         {
           "name": "deposit_amount",
           "type": "u64"
-        },
-        {
-          "name": "lock_in_duration_days",
-          "type": "u64"
         }
       ]
     },
@@ -386,7 +382,96 @@
         },
         {
           "name": "treasury_token_account",
-          "writable": true
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "treasury_wallet_account"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "usdc_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "treasury_wallet_account"
         },
         {
           "name": "usdc_mint"
@@ -394,9 +479,68 @@
         {
           "name": "token_program",
           "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
         }
       ],
       "args": []
+    },
+    {
+      "name": "start_course",
+      "discriminator": [
+        178,
+        93,
+        168,
+        244,
+        229,
+        183,
+        178,
+        33
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "lock_in_duration_days",
+          "type": "u64"
+        }
+      ]
     },
     {
       "name": "withdraw",
@@ -594,6 +738,16 @@
       "code": 6003,
       "name": "ArithmeticError",
       "msg": "An arithmetic operation failed (overflow/underflow/divide by zero)."
+    },
+    {
+      "code": 6004,
+      "name": "CourseAlreadyStarted",
+      "msg": "Cannot start a course that has already begun."
+    },
+    {
+      "code": 6005,
+      "name": "NoDepositToStartCourse",
+      "msg": "Cannot start a course without an initial deposit."
     }
   ],
   "types": [

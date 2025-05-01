@@ -27,8 +27,9 @@ import {
 import idl from '../lib/idl/skillstreak_program.json';
 
 // --- Constants ---
-const PROGRAM_ID = new PublicKey(idl.address); // Use updated IDL address
+const PROGRAM_ID = new PublicKey('E6WVbAEb6v6ujmunXtMBpkdycZi9giBwCYKZDeHvqPiT'); // Updated Program ID after deploy
 const USDC_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU'); // Updated Devnet USDC Mint
+const TREASURY_WALLET = new PublicKey('6R651eq74BXg8zeQEaGX8Fm25z1N8YDqWodv3S9kUFnn'); // Treasury Wallet for early withdrawal penalty
 const USER_SEED = Buffer.from("user");
 const VAULT_SEED = Buffer.from("vault");
 
@@ -38,13 +39,16 @@ export default function TestPage() {
     const [program, setProgram] = useState(null);
     // Renamed stake state variables to deposit
     const [depositAmount, setDepositAmount] = useState('0.5'); // Default 0.5 USDC for depositing
-    const [depositLockInDays, setDepositLockInDays] = useState('30'); // Default 30 days for depositing
+    // const [depositLockInDays, setDepositLockInDays] = useState('30'); // REMOVED: Lock-in handled by start_course now
+    const [startCourseLockInDays, setStartCourseLockInDays] = useState('30'); // ADDED: State for start_course lock-in input
     const [logs, setLogs] = useState([]);
     const [txSig, setTxSig] = useState('');
     const [isLoading, setIsLoading] = useState(false); // Tracks loading for *any* transaction
     const [isClient, setIsClient] = useState(false);
     const [isUserInitialized, setIsUserInitialized] = useState(null); // null: checking, false: needs creation, true: exists/created
     const [userStatePDA, setUserStatePDA] = useState(null); // Store the PDA for potential future use
+    // const [userDepositAmount, setUserDepositAmount] = useState(null); // REMOVED: Replaced by userStateDetails
+    const [userStateDetails, setUserStateDetails] = useState(null); // ADDED: State to store the full fetched user state
 
     // Ensure component only renders UI that depends on client state after mounting
     useEffect(() => {
@@ -81,6 +85,30 @@ export default function TestPage() {
             setProgram(null);
         }
     }, [publicKey, connection, wallet]);
+
+    // --- Function to fetch and update user state (deposit amount) ---
+    // Accepts an optional PDA override to use instead of the state variable
+    const fetchAndUpdateUserState = async (pdaOverride = null) => {
+        const pdaToUse = pdaOverride || userStatePDA;
+        if (!program || !publicKey || !pdaToUse) {
+            log(`Cannot fetch user state: prerequisites missing (program: ${!!program}, publicKey: ${!!publicKey}, pdaToUse: ${!!pdaToUse}).`);
+            setUserStateDetails(null); // Ensure display resets if prerequisites lost
+            return;
+        }
+        log(`Fetching user state data using PDA: ${pdaToUse.toBase58()}`);
+        try {
+             const fetchedState = await program.account.userState.fetch(pdaToUse, 'confirmed');
+             log('Fetched User State:', JSON.stringify(fetchedState, (key, value) =>
+                 typeof value === 'bigint' ? value.toString() : value // Convert BN/BigInt to string for logging
+             , 2));
+             // Store the whole state object
+             setUserStateDetails(fetchedState);
+         } catch (fetchError) {
+             log(`Error fetching user state details: ${fetchError.message}`);
+             console.error("User State Fetch Error:", fetchError);
+             setUserStateDetails(null); // Ensure it's null on error
+         }
+     };
 
     // --- Handler to Create User State PDA (if needed) ---
     const handleCreateUserState = async (pdaForCreation) => {
@@ -137,6 +165,7 @@ export default function TestPage() {
 
             log('User profile created successfully.');
             setIsUserInitialized(true); // <-- Set state to true upon success
+            fetchAndUpdateUserState(pdaForCreation); // Fetch initial state after creation, passing the newly created PDA
 
         } catch (error) {
             log('Error during profile creation:', error.message || JSON.stringify(error));
@@ -157,6 +186,7 @@ export default function TestPage() {
         // Only run if program, publicKey, and connection are available
         if (program && publicKey && connection) {
             setIsUserInitialized(null); // Set to loading state initially
+            setUserStateDetails(null); // Reset user details on re-check
             let derivedPDA = null; // Variable to hold derived PDA
 
             try {
@@ -186,6 +216,8 @@ export default function TestPage() {
                         } else {
                             log("User profile found.");
                             setIsUserInitialized(true); // Mark as initialized
+                            // <-- MODIFIED: Call the reusable fetch function, passing the derived pda -->
+                            fetchAndUpdateUserState(pda);
                         }
                     })
                     .catch(error => {
@@ -203,6 +235,7 @@ export default function TestPage() {
             // Reset if disconnected or program not ready
             setIsUserInitialized(null);
             setUserStatePDA(null);
+            setUserStateDetails(null); // Reset user details
         }
     // IMPORTANT: Do NOT add handleCreateUserState to dependencies to avoid loops.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -220,15 +253,15 @@ export default function TestPage() {
         }
         // Basic input validation
         const depositAmountNum = parseFloat(depositAmount);
-        const depositLockInDaysNum = parseInt(depositLockInDays, 10);
-        if (isNaN(depositAmountNum) || depositAmountNum <= 0 || isNaN(depositLockInDaysNum) || depositLockInDaysNum <= 0) {
-            log('Error: Invalid deposit amount or lock-in days.');
+        // REMOVED: lock-in days validation, no longer part of deposit
+        if (isNaN(depositAmountNum) || depositAmountNum <= 0) {
+            log('Error: Invalid deposit amount.');
             return;
         }
 
         setIsLoading(true);
         setTxSig('');
-        log(`Attempting to deposit ${depositAmountNum} USDC for ${depositLockInDaysNum} days...`);
+        log(`Attempting to deposit ${depositAmountNum} USDC...`); // Removed lock-in days from log
 
         try {
             // --- 1. Derive PDAs and ATAs (reuse userStatePDA) ---
@@ -259,15 +292,15 @@ export default function TestPage() {
 
             // --- 2. Prepare Instruction Arguments ---
             const depositAmountLamports = new BN(depositAmountNum * 1_000_000); // Assuming 6 decimals for USDC
-            const depositLockInDaysBN = new BN(depositLockInDaysNum);
+            // REMOVED: depositLockInDaysBN
 
             log(`Deposit Amount (lamports): ${depositAmountLamports.toString()}`);
-            log(`Deposit Lock-in Days (BN): ${depositLockInDaysBN.toString()}`);
+            // REMOVED: log(`Deposit Lock-in Days (BN): ${depositLockInDaysBN.toString()}`);
 
             // --- 3. Build the deposit instruction transaction ---
             log("Building deposit transaction...");
             const depositTransaction = await program.methods
-                .deposit(depositAmountLamports, depositLockInDaysBN) // Renamed method call
+                .deposit(depositAmountLamports) // REMOVED depositLockInDaysBN
                 .accounts({
                     user: publicKey,
                     userTokenAccount: userUsdcAta,
@@ -342,6 +375,7 @@ export default function TestPage() {
             // program.account.userState.fetch(userStatePDA).then(state => {
             //     log("Refreshed User State:", state);
             // });
+            fetchAndUpdateUserState(); // <-- ADDED: Refresh user state after successful deposit
 
         } catch (error) {
             log('Error during deposit:', error.message || JSON.stringify(error));
@@ -351,6 +385,280 @@ export default function TestPage() {
         }
     };
 
+    // --- Handler for Starting the Course ---
+    const handleStartCourse = async () => {
+        if (!program || !publicKey || !connection || !wallet?.adapter || !userStatePDA) {
+            log('Error: Prerequisites missing for starting course (program, wallet, connection, user PDA).');
+            return;
+        }
+        // Basic input validation
+        const lockInDaysNum = parseInt(startCourseLockInDays, 10);
+        if (isNaN(lockInDaysNum) || lockInDaysNum <= 0) {
+            log('Error: Invalid lock-in days for starting course.');
+            return;
+        }
+
+        setIsLoading(true);
+        setTxSig('');
+        log(`Attempting to start course with lock-in of ${lockInDaysNum} days...`);
+
+        try {
+            // --- 1. Prepare Instruction Arguments ---
+            const lockInDaysBN = new BN(lockInDaysNum);
+            log(`Start Course Lock-in Days (BN): ${lockInDaysBN.toString()}`);
+
+            // --- 2. Build the start_course instruction transaction ---
+            log("Building start_course transaction...");
+            const startCourseTx = await program.methods
+                .startCourse(lockInDaysBN)
+                .accounts({
+                    user: publicKey,
+                    userState: userStatePDA, // Requires userState PDA
+                })
+                .transaction();
+
+            // --- 3. Set Fee Payer and Simulate ---
+            if (!startCourseTx.feePayer) {
+                startCourseTx.feePayer = publicKey;
+            }
+            log('Simulating start_course transaction...');
+            try {
+                const simulationResult = await connection.simulateTransaction(startCourseTx);
+                if (simulationResult.value.err) {
+                    log("Simulation Error (start_course):", simulationResult.value.err);
+                    log("Simulation Logs (start_course):", simulationResult.value.logs);
+                    // Attempt to parse program logs for custom errors
+                    const errorLogs = simulationResult.value.logs?.filter(l => l.includes('Program log: Error:'));
+                    if (errorLogs?.length > 0) {
+                        log("Parsed Program Error:", errorLogs.join('\\n'));
+                    }
+                    throw new Error(`Transaction simulation failed: ${simulationResult.value.err}`);
+                }
+                log("Transaction simulation successful (start_course).");
+            } catch (simError) {
+                log("Error during simulation (start_course):", simError);
+                if (simError.simulationLogs) {
+                    log("Simulation Logs (start_course) (from catch):", simError.simulationLogs);
+                }
+                 setIsLoading(false);
+                 return; // Stop if simulation fails
+            }
+
+            // --- 4. Send the transaction ---
+            log('Sending start_course transaction...');
+            const startCourseSig = await sendTransaction(startCourseTx, connection);
+            log('Start Course Transaction sent:', startCourseSig);
+            setTxSig(startCourseSig);
+
+            // --- 5. Confirm Transaction ---
+            log('Confirming start_course transaction...');
+            const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+            const confirmation = await connection.confirmTransaction({
+                signature: startCourseSig,
+                blockhash,
+                lastValidBlockHeight
+            }, 'confirmed');
+
+            if (confirmation.value.err) {
+                log('Start course transaction confirmation failed:', confirmation.value.err);
+                try {
+                    const txDetails = await connection.getTransaction(startCourseSig, {maxSupportedTransactionVersion: 0});
+                    if (txDetails?.meta?.logMessages) {
+                        log("Failed Start Course Transaction Logs:", txDetails.meta.logMessages.join('\\n'));
+                    }
+                } catch (logError) {
+                    log("Could not fetch logs for failed start_course transaction:", logError);
+                }
+                throw new Error(`Start course transaction failed: ${confirmation.value.err}`);
+            }
+
+            log('Start course transaction confirmed successfully.');
+            fetchAndUpdateUserState(); // Refresh user state after successful start
+
+        } catch (error) {
+            log('Error during start_course:', error.message || JSON.stringify(error));
+            console.error("Start Course Error:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    // --- Handler for Withdrawing Funds ---
+    const handleWithdraw = async () => {
+        if (!program || !publicKey || !connection || !wallet?.adapter || !userStatePDA) {
+            log('Error: Prerequisites missing for withdrawal (program, wallet, connection, user PDA).');
+            return;
+        }
+
+        setIsLoading(true);
+        setTxSig('');
+        log('Attempting to withdraw funds...');
+
+        try {
+            // --- 1. Fetch User State and Current Time ---
+            log('Fetching user state...');
+            const userState = await program.account.userState.fetch(userStatePDA);
+            log('User State Fetched:', {
+                depositAmount: userState.depositAmount.toString(),
+                lockInEndTimestamp: userState.lockInEndTimestamp.toString(),
+                accruedYield: userState.accruedYield.toString(),
+            });
+
+            log('Fetching current blockchain time...');
+            const currentSlot = await connection.getSlot();
+            const currentTimestamp = await connection.getBlockTime(currentSlot);
+            log(`Current Timestamp: ${currentTimestamp}`);
+
+            const isLocked = currentTimestamp < userState.lockInEndTimestamp.toNumber();
+            log(`Is withdrawal period still locked? ${isLocked}`);
+
+            // --- 2. Derive Accounts ---
+            log('Deriving necessary accounts for withdrawal...');
+            const [vaultPDA, vaultBump] = PublicKey.findProgramAddressSync(
+                [VAULT_SEED],
+                program.programId
+            );
+            log(`Vault Authority PDA: ${vaultPDA.toBase58()}`);
+
+            const userUsdcAta = getAssociatedTokenAddressSync(USDC_MINT, publicKey);
+            log(`User USDC ATA: ${userUsdcAta.toBase58()}`);
+
+            const vaultUsdcAta = getAssociatedTokenAddressSync(USDC_MINT, vaultPDA, true);
+            log(`Vault USDC ATA: ${vaultUsdcAta.toBase58()}`);
+
+            let withdrawalInstruction;
+            let instructionName = isLocked ? 'earlyWithdraw' : 'withdraw';
+
+            // --- 3. Build Correct Instruction (Withdraw or Early Withdraw) ---
+            log(`Building ${instructionName} transaction...`);
+
+            if (isLocked) {
+                // Early Withdraw
+                const treasuryTokenAccount = getAssociatedTokenAddressSync(USDC_MINT, TREASURY_WALLET);
+                log(`Treasury Token ATA: ${treasuryTokenAccount.toBase58()}`);
+                log(`Using Treasury Wallet Pubkey: ${TREASURY_WALLET.toBase58()}`); // Add sanity check log
+
+                withdrawalInstruction = program.methods
+                    .earlyWithdraw()
+                    .accounts({
+                        user: publicKey,
+                        userState: userStatePDA,
+                        userTokenAccount: userUsdcAta,
+                        vault: vaultPDA,
+                        vaultTokenAccount: vaultUsdcAta,
+                        treasuryTokenAccount: treasuryTokenAccount,
+                        treasuryWalletAccount: TREASURY_WALLET,
+                        usdcMint: USDC_MINT,
+                        tokenProgram: TOKEN_PROGRAM_ID,
+                        systemProgram: SystemProgram.programId,
+                        associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                        rent: web3.SYSVAR_RENT_PUBKEY,
+                    });
+
+                // Log the account metas prepared by Anchor before creating the transaction
+                try {
+                    // This accesses internal details, might change in future Anchor versions
+                    const instruction = await withdrawalInstruction.instruction(); // Get the instruction object
+                    log("Raw instruction accounts prepared by Anchor:");
+                    instruction.keys.forEach((key, index) => {
+                        log(`  [${index}] pubkey: ${key.pubkey.toBase58()}, isSigner: ${key.isSigner}, isWritable: ${key.isWritable}`);
+                    });
+
+                    // Find the index expected for treasury_wallet_account based on Rust/IDL order
+                    // User(mut,signer), UserState(mut), UserToken(mut), Vault(CHECK), VaultToken(mut), TreasuryToken(mut,init), TreasuryWallet(CHECK,address), Mint(CHECK), TokenProg, SysProg, AssocTokenProg, Rent
+                    const expectedTreasuryWalletIndex = 6; // Index 6 based on the above order
+                    if (instruction.keys.length > expectedTreasuryWalletIndex) {
+                        const keyAtIndex = instruction.keys[expectedTreasuryWalletIndex];
+                        log(`Account at expected index ${expectedTreasuryWalletIndex} (treasury_wallet_account): ${keyAtIndex.pubkey.toBase58()}`);
+                        if (keyAtIndex.pubkey.toBase58() !== TREASURY_WALLET.toBase58()) {
+                            log("!!! Mismatch detected between expected treasury wallet and key at index !!!");
+                        }
+                    } else {
+                        log("Error: Could not find expected index for treasury_wallet_account in instruction keys.");
+                    }
+
+                } catch (err) {
+                    log("Error inspecting withdrawalInstruction accounts:", err);
+                }
+
+            } else {
+                // Normal Withdraw
+                withdrawalInstruction = program.methods
+                    .withdraw()
+                    .accounts({
+                        user: publicKey,
+                        userState: userStatePDA,
+                        userTokenAccount: userUsdcAta,
+                        vault: vaultPDA,
+                        vaultTokenAccount: vaultUsdcAta,
+                        usdcMint: USDC_MINT,
+                        tokenProgram: TOKEN_PROGRAM_ID,
+                    });
+            }
+
+            const withdrawalTransaction = await withdrawalInstruction.transaction();
+
+            // --- 4. Set Fee Payer and Simulate ---
+            if (!withdrawalTransaction.feePayer) {
+                withdrawalTransaction.feePayer = publicKey;
+            }
+            log(`Simulating ${instructionName} transaction...`);
+            try {
+                const simulationResult = await connection.simulateTransaction(withdrawalTransaction);
+                if (simulationResult.value.err) {
+                    log(`Simulation Error (${instructionName}):`, simulationResult.value.err);
+                    log(`Simulation Logs (${instructionName}):`, simulationResult.value.logs);
+                    throw new Error(`Transaction simulation failed: ${simulationResult.value.err}`);
+                }
+                log(`Transaction simulation successful (${instructionName}).`);
+            } catch (simError) {
+                log(`Error during simulation (${instructionName}):`, simError);
+                if (simError.simulationLogs) {
+                    log(`Simulation Logs (${instructionName}) (from catch):`, simError.simulationLogs);
+                }
+                setIsLoading(false);
+                return;
+            }
+
+            // --- 5. Send Transaction ---
+            log(`Sending ${instructionName} transaction...`);
+            const withdrawalSignature = await sendTransaction(withdrawalTransaction, connection);
+            log(`${instructionName.charAt(0).toUpperCase() + instructionName.slice(1)} Transaction sent:`, withdrawalSignature);
+            setTxSig(withdrawalSignature);
+
+            // --- 6. Confirm Transaction ---
+            log(`Confirming ${instructionName} transaction...`);
+            const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+            const confirmation = await connection.confirmTransaction({
+                signature: withdrawalSignature,
+                blockhash,
+                lastValidBlockHeight
+            }, 'confirmed');
+
+            if (confirmation.value.err) {
+                log(`${instructionName.charAt(0).toUpperCase() + instructionName.slice(1)} transaction confirmation failed:`, confirmation.value.err);
+                try {
+                    const txDetails = await connection.getTransaction(withdrawalSignature, {maxSupportedTransactionVersion: 0});
+                    if (txDetails?.meta?.logMessages) {
+                        log(`Failed ${instructionName} Transaction Logs:`, txDetails.meta.logMessages.join('\n'));
+                    }
+                } catch (logError) {
+                    log(`Could not fetch logs for failed ${instructionName} transaction:`, logError);
+                }
+                throw new Error(`${instructionName} transaction failed: ${confirmation.value.err}`);
+            }
+
+            log(`${instructionName.charAt(0).toUpperCase() + instructionName.slice(1)} transaction confirmed successfully.`);
+            // Optional: Re-fetch user state here to update UI display about balance etc.
+            fetchAndUpdateUserState(); // <-- ADDED: Refresh user state after successful withdrawal
+
+        } catch (error) {
+            log('Error during withdrawal:', error.message || JSON.stringify(error));
+            console.error("Withdrawal Error:", error);
+        } finally {
+            setIsLoading(false);
+        }
+    };
 
     return (
         <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
@@ -379,7 +687,27 @@ export default function TestPage() {
                     {isUserInitialized === true && (
                         <div style={{ marginTop: '30px', borderTop: '1px dashed #aaa', paddingTop: '20px' }}>
                              {/* Maybe add a clearer message that profile is ready */}
-                             <p style={{ color: 'green', fontWeight: 'bold' }}>User profile ready.</p>
+                             <p style={{ color: 'green', fontWeight: 'bold' }}>User profile initialized.</p>
+                             {/* --- MODIFIED: Display detailed user state --- */}
+                             {userStateDetails !== null ? (
+                                <div style={{ background: '#eee', padding: '10px', marginBottom: '15px', borderRadius: '5px' }}>
+                                    <h4>Your Current State:</h4>
+                                    <pre style={{ whiteSpace: 'pre-wrap', wordWrap: 'break-word', color: '#333' }}>
+                                        {`Deposit Amount: ${(userStateDetails.depositAmount.toNumber() / 1_000_000).toFixed(6)} USDC\\n`}
+                                        {`Initial Deposit: ${(userStateDetails.initialDepositAmount.toNumber() / 1_000_000).toFixed(6)} USDC\\n`}
+                                        {`Current Streak: ${userStateDetails.currentStreak.toString()}\\n`}
+                                        {`Miss Count: ${userStateDetails.missCount.toString()}\\n`}
+                                        {`Deposit Timestamp: ${userStateDetails.depositTimestamp.toNumber() ? new Date(userStateDetails.depositTimestamp.toNumber() * 1000).toLocaleString() : 'N/A'}\\n`}
+                                        {`Last Task Timestamp: ${userStateDetails.lastTaskTimestamp.toNumber() ? new Date(userStateDetails.lastTaskTimestamp.toNumber() * 1000).toLocaleString() : 'N/A'}\\n`}
+                                        {`Lock-in Ends: ${userStateDetails.lockInEndTimestamp.toNumber() ? new Date(userStateDetails.lockInEndTimestamp.toNumber() * 1000).toLocaleString() : 'Not Started'}\\n`}
+                                        {`Accrued Yield: ${(userStateDetails.accruedYield.toNumber() / 1_000_000).toFixed(6)} USDC`}
+                                    </pre>
+                                </div>
+                             ) : (
+                                <p>Fetching user state details...</p>
+                             )}
+
+                            {/* --- Deposit Section (Only Deposit Amount) --- */}
                             <h2>Deposit Funds</h2>
                             {/* Deposit Amount Input */}
                             <div style={{ marginBottom: '10px' }}>
@@ -396,25 +724,50 @@ export default function TestPage() {
                                     />
                                 </label>
                             </div>
-                            {/* Lock-in Duration Input */}
-                            <div style={{ marginBottom: '10px' }}>
-                                <label>
-                                    Lock-in Duration (Days):{' '}
-                                    <input
-                                        type="number"
-                                        value={depositLockInDays} // Renamed state variable
-                                        onChange={(e) => setDepositLockInDays(e.target.value)} // Renamed state setter
-                                        min="1" // Assuming minimum 1 day lock for deposit too
-                                        step="1"
-                                        disabled={isLoading}
-                                        style={{ color: '#000000' }}
-                                    />
-                                </label>
-                            </div>
+                            {/* REMOVED: Lock-in Duration Input */}
                             {/* Deposit Button */}
-                            <button onClick={handleDeposit} disabled={isLoading || !publicKey}> {/* Renamed onClick handler */}
-                                {isLoading ? 'Processing Deposit...' : 'Deposit Funds'} {/* Renamed button text */}
-                            </button>
+                            <div style={{ marginBottom: '10px' }}>
+                                <button onClick={handleDeposit} disabled={isLoading || !publicKey}>
+                                    {isLoading ? 'Processing Deposit...' : 'Deposit Funds'}
+                                </button>
+                            </div>
+
+                            {/* --- Start Course Section (Conditional) --- */}
+                            {userStateDetails && userStateDetails.lockInEndTimestamp.toNumber() === 0 && userStateDetails.depositAmount.toNumber() > 0 && (
+                                <div style={{ marginTop: '20px', borderTop: '1px dashed #ccc', paddingTop: '15px' }}>
+                                    <h2>Start Course</h2>
+                                    <p>You have a deposit. Start the course to lock it in and begin tracking your streak.</p>
+                                    <div style={{ marginBottom: '10px' }}>
+                                        <label>
+                                            Lock-in Duration (Days):{' '}
+                                            <input
+                                                type="number"
+                                                value={startCourseLockInDays} // Use new state variable
+                                                onChange={(e) => setStartCourseLockInDays(e.target.value)} // Use new state setter
+                                                min="1"
+                                                step="1"
+                                                disabled={isLoading}
+                                                style={{ color: '#000000' }}
+                                            />
+                                        </label>
+                                    </div>
+                                    <button onClick={handleStartCourse} disabled={isLoading || !publicKey}>
+                                        {isLoading ? 'Starting Course...' : 'Start Course'}
+                                    </button>
+                                </div>
+                            )}
+
+                            {/* --- Withdraw Section --- */}
+                            <div style={{ marginTop: '20px', borderTop: '1px dashed #ccc', paddingTop: '15px' }}>
+                                <h2>Withdraw Funds</h2>
+                                <p>Withdraw your funds (including yield) after the lock-in period ends, or withdraw early with a penalty.</p>
+                                <button
+                                    onClick={handleWithdraw}
+                                    disabled={isLoading || !publicKey || !userStateDetails || userStateDetails.depositAmount.toNumber() === 0} // Disable if no deposit
+                                >
+                                    {isLoading ? 'Processing Withdrawal...' : 'Withdraw / Early Withdraw'}
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
@@ -449,4 +802,4 @@ export default function TestPage() {
     );
 }
 // Added import for getAccount used in handleDeposit
-import { getAccount } from '@solana/spl-token'; 
+import { getAccount } from '@solana/spl-token';
