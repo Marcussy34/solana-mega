@@ -49,17 +49,32 @@ This document outlines the planned implementation phases for the core SkillStrea
 
 ## Phase 2: Streak & Task Tracking
 
-**Goal:** Track user task completion streaks once a course has started.
+**Goal:** Track user task completion streaks in a rolling 24-hour timer model, similar to Snapchat or TikTok streaks.
 
-1. **Implement `record_task` Instruction:**
+1. **Extend `UserState` Struct:**
+   * Add:
+     * `streak_expires_at: i64`
+     * `last_streak_increment_timestamp: i64`
+
+2. **Implement `record_task` Instruction:**
    * **Instruction:** `fn record_task(ctx: Context<RecordTask>) -> Result<()>`
    * **Accounts:** `user`, `user_state`
    * **Logic:**
      * Use `Clock::get()?.unix_timestamp`
-     * If `last_task_timestamp != 0`, validate window (e.g., 24–36 hours)
-     * If valid: update `last_task_timestamp`, increment `current_streak`
-     * If missed window: return error or let `record_miss` handle it
-
+     * Reject if lock-in not started or already ended
+     * If `streak_expires_at == 0`:
+       * First task: set `current_streak = 1`
+       * Set `last_streak_increment_timestamp = now`
+       * Set `streak_expires_at = now + 86400`
+     * Else if `now > streak_expires_at`:
+       * Missed window: return error (`StreakExpired`) or trigger `record_miss`
+     * Else if `now >= last_streak_increment_timestamp + 86400`:
+       * Enough time has passed since last streak increment:
+         * Increment `current_streak`
+         * Update `last_streak_increment_timestamp = now`
+     * Always:
+       * Update `last_task_timestamp = now`
+       * Update `streak_expires_at = now + 86400` (reset timer)
 ---
 
 ## Phase 3: Penalty Buffer & Miss Handling
