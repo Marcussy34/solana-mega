@@ -57,7 +57,7 @@ export default function WalletsPage() {
               <div key={wallet.id} className="w-full max-w-md">
                 <CardContainer className="w-full" containerClassName="!py-4 !w-full">
                   <CardBody className="!w-full !h-[380px]">
-                    <button className="w-full h-full focus:outline-none">
+                    <Link href="/homepage" className="block w-full h-full focus:outline-none">
                       <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer"
                         style={{
                           background: wallet.gradient,
@@ -109,19 +109,10 @@ export default function WalletsPage() {
                                 {wallet.description}
                               </CardItem>
                             </div>
-                            
-                            {/* Bottom button */}
-                            <div className="mt-6">
-                              <CardItem
-                                translateZ={40}
-                                className="bg-white/10 group-hover:bg-white/20 text-white py-3 px-6 rounded-lg text-center font-medium transition-colors">
-                                Connect Wallet
-                              </CardItem>
-                            </div>
                           </div>
                         </div>
                       </div>
-                    </button>
+                    </Link>
                   </CardBody>
                 </CardContainer>
               </div>
