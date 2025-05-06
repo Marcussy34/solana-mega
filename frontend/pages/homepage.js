@@ -10,6 +10,7 @@ import Link from 'next/link';
 const Homepage = () => {
   const [showModal, setShowModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
+  const [showExtendLockModal, setShowExtendLockModal] = useState(false); // New state for extend lock modal
   const [selectedLockPeriod, setSelectedLockPeriod] = useState(null);
   const [amount, setAmount] = useState('');
   const [estimates, setEstimates] = useState({});
@@ -24,7 +25,7 @@ const Homepage = () => {
 
   // Add state for collapsible custom cards
   const [solanaTileCollapsed, setSolanaTileCollapsed] = useState(false);
-  const [smartContractTileCollapsed, setSmartContractTileCollapsed] = useState(false);
+  const [smartContractTileCollapsed, setSmartContractTileCollapsed] = useState(true);
   
   const toggleSolanaTile = (e) => {
     e.stopPropagation(); // Prevent onClick from firing when clicking the toggle button
@@ -50,22 +51,36 @@ const Homepage = () => {
         </svg>
       ),
       showLockInLabel: true,
+      learningCategories: [
+        { title: "Blockchain Fundamentals", completion: "4 modules" },
+        { title: "Solana Architecture", completion: "5 modules" },
+        { title: "Token Economics", completion: "3 modules" },
+        { title: "Wallet Management", completion: "2 modules" },
+        { title: "DeFi Applications", completion: "6 modules" }
+      ]
     },
     {
       title: "Smart Contract 101",
       description: "Explore the fundamentals of smart contracts and blockchain programming",
       progress: 48,
-      iconBg: "bg-green-500/20",
-      iconColor: "text-green-400",
-      accentColor: "bg-green-500",
+      iconBg: "bg-purple-500/20",
+      iconColor: "text-purple-400",
+      accentColor: "bg-purple-500",
       riskLevel: "high",
       showRiskLevel: true,
       showProgress: true,
       icon: (
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-400" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
         </svg>
       ),
+      learningCategories: [
+        { title: "Smart Contract Basics", completion: "3 modules" },
+        { title: "Rust Programming", completion: "7 modules" },
+        { title: "Solana Program Model", completion: "4 modules" },
+        { title: "Security Fundamentals", completion: "5 modules" },
+        { title: "Deployment & Testing", completion: "3 modules" }
+      ]
     }
   ];
 
@@ -474,7 +489,7 @@ const Homepage = () => {
                                 lockedRiskLevel === 'low' ? 'text-blue-300' : 
                                 lockedRiskLevel === 'medium' ? 'text-amber-300' : 
                                 'text-purple-300'
-                              }`}>15%</span>
+                              }`}>0%</span>
                             </div>
                             <motion.div 
                               className="h-2 bg-gray-700/60 rounded-full overflow-hidden"
@@ -488,9 +503,9 @@ const Homepage = () => {
                                   lockedRiskLevel === 'medium' ? 'bg-amber-500' :
                                   'bg-purple-500'
                                 }`}
-                                style={{ width: '15%' }}
-                                initial={animateCard ? { width: "0%" } : { width: "15%" }}
-                                animate={{ width: "15%" }}
+                                style={{ width: '0%' }}
+                                initial={animateCard ? { width: "0%" } : { width: "0%" }}
+                                animate={{ width: "0%" }}
                                 transition={{ delay: 0.9, duration: 0.7 }}
                               />
                             </motion.div>
@@ -509,9 +524,9 @@ const Homepage = () => {
                               lockedRiskLevel === 'medium' ? 'text-amber-300' : 
                               'text-purple-300'
                             }`}>
-                              {lockedPeriod === '1month' ? '25 days' : 
-                               lockedPeriod === '3months' ? '76 days' : 
-                               lockedPeriod === '6months' ? '153 days' : '310 days'}
+                              {lockedPeriod === '1month' ? '30 days' : 
+                               lockedPeriod === '3months' ? '90 days' : 
+                               lockedPeriod === '6months' ? '180 days' : '365 days'}
                             </div>
                           </motion.div>
                           
@@ -559,7 +574,7 @@ const Homepage = () => {
                             >
                               <div className="text-sm font-medium mb-2 text-gray-300">Asset Allocation</div>
                               <div className="space-y-2">
-                                {selectedRisk.allocation.map((asset, index) => (
+                                {riskLevels.find(r => r.id === lockedRiskLevel)?.allocation.map((asset, index) => (
                                   <motion.div 
                                     key={index} 
                                     className="flex items-center justify-between"
@@ -622,8 +637,10 @@ const Homepage = () => {
                                     ? 'bg-amber-500/20 text-amber-300 hover:bg-amber-500/30 border border-amber-500/30'
                                     : 'bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30'
                               }`}
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 console.log("Extend lock clicked");
+                                setShowExtendLockModal(true);
                               }}
                               whileHover={{ scale: 1.03 }}
                               whileTap={{ scale: 0.97 }}
@@ -639,8 +656,10 @@ const Homepage = () => {
                             {/* Resume Course Button */}
                             <motion.button 
                               className="py-2.5 px-4 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 console.log("Resume course clicked");
+                                setShowResumeModal(true);
                               }}
                               whileHover={{ scale: 1.03 }}
                               whileTap={{ scale: 0.97 }}
@@ -660,203 +679,375 @@ const Homepage = () => {
                 </AnimatePresence>
               ) : subject.title === "Smart Contract 101" && showSmartContractProgress ? (
                 // Custom card for Smart Contract 101
-                <div 
-                  className="bg-gray-800 rounded-xl p-6 shadow-lg border border-green-500/50 hover:border-green-500 transition-colors cursor-pointer"
-                  onClick={() => setSmartContractTileCollapsed(!smartContractTileCollapsed)}
-                >
-                  {/* Header Row */}
-                  <div className="flex justify-between mb-4">
-                    {/* Left side: Logo and Title */}
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mr-3">
-                        {subject.icon}
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-medium text-white">{subject.title}</h3>
-                        
-                        {/* Risk level tooltip - only show in expanded mode */}
-                        {!smartContractTileCollapsed && (
-                          <div 
-                            className="relative inline-block mt-1"
-                            onMouseEnter={() => setShowRiskTooltip(true)}
-                            onMouseLeave={() => setShowRiskTooltip(false)}
-                          >
-                            <span className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-300">
-                              High Risk
-                            </span>
-                            
-                            {/* Risk Tooltip */}
-                            {showRiskTooltip && (
-                              <div className="absolute left-0 bottom-full mb-2 w-64 p-2 bg-gray-900 text-xs text-purple-300 rounded shadow-lg z-10">
-                                <div className="flex items-start">
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9z" clipRule="evenodd" />
-                                  </svg>
-                                  Higher risk exposure significantly increases potential for losses. Only allocate funds you can afford to lose.
-                                </div>
-                                <div className="w-3 h-3 bg-gray-900 absolute -bottom-1.5 left-4 transform rotate-45"></div>
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  
-                  {/* Collapsible Content */}
-                  <AnimatePresence>
-                    {!smartContractTileCollapsed && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        transition={{ duration: 0.3 }}
+                <AnimatePresence>
+                  <div 
+                    className="bg-gray-800 rounded-xl p-6 shadow-lg border border-purple-500/50 hover:border-purple-500 transition-colors cursor-pointer"
+                    onClick={() => setSmartContractTileCollapsed(!smartContractTileCollapsed)}
+                  >
+                    {/* Header Row with Logo, Title, Badge and Expand/Collapse Button */}
+                    <div className="flex justify-between mb-4">
+                      {/* Left side: Logo and Title */}
+                      <motion.div 
+                        className="flex items-center"
+                        initial={animateCard ? { opacity: 0, x: -20 } : { opacity: 1, x: 0 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ duration: 0.4 }}
                       >
-                        {/* Progress Bar */}
-                        <div className="mb-4">
-                          <div className="flex justify-between items-center text-sm mb-1">
-                            <span className="text-gray-400">Course Progress</span>
-                            <span className="font-medium text-purple-300">48%</span>
-                          </div>
-                          <div className="h-2 bg-gray-700/60 rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-purple-500 rounded-full"
-                              style={{ width: '48%' }}
-                            />
-                          </div>
-                        </div>
-                        
-                        {/* Time Left */}
-                        <div className="mb-4 bg-gray-700/30 rounded-lg p-2.5 flex justify-between items-center">
-                          <div className="text-sm text-gray-400">Time Remaining</div>
-                          <div className="text-sm font-medium text-purple-300">
-                            45 days
-                          </div>
-                        </div>
-                        
-                        {/* Grid layout for fund details and asset allocation */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                          {/* Left column: Amount, Risk Level, Lock Period */}
-                          <div>
-                            <div className="mb-4">
-                              <div className="text-sm text-gray-400 mb-1">Locked Amount</div>
-                              <div className="text-xl font-bold text-white">$500</div>
-                            </div>
-                            
-                            <div className="grid grid-cols-2 gap-3">
-                              <div>
-                                <div className="text-sm text-gray-400 mb-1">Risk Level</div>
-                                <div className="text-sm font-medium text-purple-300">
-                                  High Risk
-                                </div>
-                              </div>
-                              <div>
-                                <div className="text-sm text-gray-400 mb-1">Lock Period</div>
-                                <div className="text-sm font-medium text-white">
-                                  3 Months
-                                </div>
-                              </div>
-                            </div>
-                          </div>
+                        <motion.div 
+                          className="flex-shrink-0 w-12 h-12 bg-purple-500/20 rounded-full flex items-center justify-center mr-3"
+                          initial={animateCard ? { scale: 0, opacity: 0 } : { scale: 1, opacity: 1 }}
+                          animate={{ scale: 1, opacity: 1 }}
+                          transition={{ 
+                            type: "spring",
+                            stiffness: 260,
+                            damping: 20,
+                            delay: 0.1
+                          }}
+                        >
+                          {subject.icon}
+                        </motion.div>
+                        <div>
+                          <motion.h3 
+                            className="text-lg font-medium text-white"
+                            initial={animateCard ? { opacity: 0 } : { opacity: 1 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: 0.3 }}
+                          >
+                            {subject.title}
+                          </motion.h3>
                           
-                          {/* Right column: Asset Allocation */}
-                          <div className="bg-gray-700/30 rounded-lg p-3">
-                            <div className="text-sm font-medium mb-2 text-gray-300">Asset Allocation</div>
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                  <div className="w-2.5 h-2.5 rounded-full mr-2 bg-blue-500"></div>
-                                  <span className="text-xs text-gray-400">Stable Lending</span>
+                          {/* Risk level badge - only show in expanded view or moved to right in collapsed view */}
+                          {!smartContractTileCollapsed && (
+                            <motion.div 
+                              className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-300"
+                              initial={animateCard ? { opacity: 0, scale: 0.8 } : { opacity: 1, scale: 1 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              transition={{ delay: 0.4 }}
+                              onMouseEnter={() => setShowRiskTooltip(true)}
+                              onMouseLeave={() => setShowRiskTooltip(false)}
+                            >
+                              Funds Locked
+                              
+                              {/* Risk Tooltip */}
+                              {showRiskTooltip && (
+                                <div className="absolute left-0 bottom-full mb-2 w-64 p-2 bg-gray-900 text-xs text-purple-300 rounded shadow-lg z-10">
+                                  <div className="flex items-start">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9z" clipRule="evenodd" />
+                                    </svg>
+                                    Higher risk exposure significantly increases potential for losses. Only allocate funds you can afford to lose.
+                                  </div>
+                                  <div className="w-3 h-3 bg-gray-900 absolute -bottom-1.5 left-4 transform rotate-45"></div>
                                 </div>
-                                <span className="text-xs text-white font-medium">20%</span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                  <div className="w-2.5 h-2.5 rounded-full mr-2 bg-amber-500"></div>
-                                  <span className="text-xs text-gray-400">AMM Pools</span>
-                                </div>
-                                <span className="text-xs text-white font-medium">30%</span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                  <div className="w-2.5 h-2.5 rounded-full mr-2 bg-purple-500"></div>
-                                  <span className="text-xs text-gray-400">Leveraged Yield</span>
-                                </div>
-                                <span className="text-xs text-white font-medium">40%</span>
-                              </div>
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center">
-                                  <div className="w-2.5 h-2.5 rounded-full mr-2 bg-rose-500"></div>
-                                  <span className="text-xs text-gray-400">New Protocols</span>
-                                </div>
-                                <span className="text-xs text-white font-medium">10%</span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Estimated Returns */}
-                        <div className="rounded-lg p-3 border my-4 bg-purple-500/10 border-purple-500/30">
-                          <div className="flex justify-between">
-                            <div className="text-sm text-gray-400">Estimated Return</div>
-                            <div className="text-white font-medium">
-                              $15.00
-                            </div>
-                          </div>
-                        </div>
-                        
-                        {/* Action Buttons */}
-                        <div className="grid grid-cols-2 gap-3">
-                          {/* Extend Lock Button */}
-                          <button 
-                            className="py-2.5 px-4 rounded-lg font-medium transition-colors bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30"
-                            onClick={() => {
-                              console.log("Extend lock clicked");
-                            }}
-                          >
-                            <div className="flex items-center justify-center">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-                              </svg>
-                              Extend Lock
-                            </div>
-                          </button>
-
-                          {/* Continue Button */}
-                          <button 
-                            className="py-2.5 px-4 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors"
-                            onClick={() => {
-                              console.log("Resume course clicked");
-                              setShowResumeModal(true);
-                            }}
-                          >
-                            <div className="flex items-center justify-center">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
-                              </svg>
-                              Resume Course
-                            </div>
-                          </button>
+                              )}
+                            </motion.div>
+                          )}
                         </div>
                       </motion.div>
-                    )}
-                  </AnimatePresence>
-                </div>
+                      
+                      {/* Right side: Risk level in collapsed mode or Donut Chart in expanded mode */}
+                      <div className="flex items-center">
+                        {smartContractTileCollapsed ? (
+                          /* Risk level badge moved to right when collapsed */
+                          <motion.div 
+                            className="inline-block px-2 py-0.5 rounded text-xs font-medium bg-purple-500/20 text-purple-300 mr-2"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.3 }}
+                          >
+                            High Risk
+                          </motion.div>
+                        ) : (
+                          /* Donut Chart - only visible when expanded */
+                          <motion.div 
+                            className="flex-shrink-0 w-20 h-20 relative"
+                            initial={animateCard ? { opacity: 0, scale: 0.5 } : { opacity: 1, scale: 1 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            transition={{ 
+                              type: "spring",
+                              stiffness: 200,
+                              damping: 20,
+                              delay: 0.5
+                            }}
+                          >
+                            {/* SVG Donut Chart */}
+                            <svg viewBox="0 0 36 36" className="w-full h-full">
+                              <circle cx="18" cy="18" r="15.91549430918954" fill="transparent" stroke="#1e293b" strokeWidth="3"></circle>
+                              
+                              {/* High Risk Allocation */}
+                              <>
+                                {/* 20% Stable Lending */}
+                                <circle 
+                                  cx="18" cy="18" r="15.91549430918954" fill="transparent"
+                                  stroke="#3b82f6" 
+                                  strokeWidth="3"
+                                  strokeDasharray="20 80"
+                                  strokeDashoffset="25" 
+                                  className="transition-all duration-1000"
+                                  style={{ 
+                                    animation: animateCard ? 'donut-chart-fill 1.5s ease-in-out forwards' : 'none',
+                                  }}
+                                ></circle>
+                                {/* 30% AMM Pools */}
+                                <circle 
+                                  cx="18" cy="18" r="15.91549430918954" fill="transparent"
+                                  stroke="#f59e0b" 
+                                  strokeWidth="3"
+                                  strokeDasharray="30 70"
+                                  strokeDashoffset="5" 
+                                  className="transition-all duration-1000"
+                                  style={{ 
+                                    animation: animateCard ? 'donut-chart-fill 1.5s ease-in-out forwards' : 'none',
+                                  }}
+                                ></circle>
+                                {/* 40% Leveraged Yield */}
+                                <circle 
+                                  cx="18" cy="18" r="15.91549430918954" fill="transparent"
+                                  stroke="#8b5cf6" 
+                                  strokeWidth="3"
+                                  strokeDasharray="40 60"
+                                  strokeDashoffset="-25" 
+                                  className="transition-all duration-1000"
+                                  style={{ 
+                                    animation: animateCard ? 'donut-chart-fill 1.5s ease-in-out forwards' : 'none',
+                                  }}
+                                ></circle>
+                                {/* 10% New Protocols */}
+                                <circle 
+                                  cx="18" cy="18" r="15.91549430918954" fill="transparent"
+                                  stroke="#f43f5e" 
+                                  strokeWidth="3"
+                                  strokeDasharray="10 90"
+                                  strokeDashoffset="-65" 
+                                  className="transition-all duration-1000"
+                                  style={{ 
+                                    animation: animateCard ? 'donut-chart-fill 1.5s ease-in-out forwards' : 'none',
+                                  }}
+                                ></circle>
+                              </>
+
+                              {/* Inner text showing risk level */}
+                              <text x="18" y="18" fill="white" textAnchor="middle" dominantBaseline="central" className="text-[0.25rem] font-medium">
+                                HIGH
+                              </text>
+                            </svg>
+                          </motion.div>
+                        )}
+                        
+                        {/* Collapse/Expand button - small version that doesn't propagate click */}
+                        <button 
+                          className="text-gray-400 hover:text-white transition-colors p-1"
+                          onClick={toggleSmartContractTile}
+                        >
+                          {smartContractTileCollapsed ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                            </svg>
+                          ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M14.707 12.707a1 1 0 01-1.414 0L10 9.414l-3.293 3.293a1 1 0 01-1.414-1.414l4-4a1 1 0 011.414 0l4 4a1 1 0 010 1.414z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    
+                    {/* Collapsible Content */}
+                    <AnimatePresence>
+                      {!smartContractTileCollapsed && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3 }}
+                        >
+                          {/* Progress Bar */}
+                          <motion.div 
+                            className="mb-4"
+                            initial={animateCard ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.6 }}
+                          >
+                            <div className="flex justify-between items-center text-sm mb-1">
+                              <span className="text-gray-400">Course Progress</span>
+                              <span className="font-medium text-purple-300">48%</span>
+                            </div>
+                            <motion.div 
+                              className="h-2 bg-gray-700/60 rounded-full overflow-hidden"
+                              initial={animateCard ? { width: 0 } : { width: "100%" }}
+                              animate={{ width: "100%" }}
+                              transition={{ delay: 0.7, duration: 0.5 }}
+                            >
+                              <motion.div 
+                                className="h-full rounded-full bg-purple-500"
+                                style={{ width: '48%' }}
+                                initial={animateCard ? { width: "0%" } : { width: "48%" }}
+                                animate={{ width: "48%" }}
+                                transition={{ delay: 0.9, duration: 0.7 }}
+                              />
+                            </motion.div>
+                          </motion.div>
+                          
+                          {/* Time Left */}
+                          <motion.div 
+                            className="mb-4 bg-gray-700/30 rounded-lg p-2.5 flex justify-between items-center"
+                            initial={animateCard ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.7 }}
+                          >
+                            <div className="text-sm text-gray-400">Time Remaining</div>
+                            <div className="text-sm font-medium text-purple-300">
+                              45 days
+                            </div>
+                          </motion.div>
+                          
+                          {/* Grid layout for fund details and asset allocation */}
+                          <motion.div 
+                            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+                            initial={animateCard ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.8 }}
+                          >
+                            {/* Left column: Amount, Risk Level, Lock Period */}
+                            <div>
+                              <div className="mb-4">
+                                <div className="text-sm text-gray-400 mb-1">Locked Amount</div>
+                                <div className="text-xl font-bold text-white">$500</div>
+                              </div>
+                              
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <div className="text-sm text-gray-400 mb-1">Risk Level</div>
+                                  <div className="text-sm font-medium text-purple-300">
+                                    High Risk
+                                  </div>
+                                </div>
+                                <div>
+                                  <div className="text-sm text-gray-400 mb-1">Lock Period</div>
+                                  <div className="text-sm font-medium text-white">
+                                    3 Months
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            
+                            {/* Right column: Asset Allocation */}
+                            <div className="bg-gray-700/30 rounded-lg p-3">
+                              <div className="text-sm font-medium mb-2 text-gray-300">Asset Allocation</div>
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <div className="w-2.5 h-2.5 rounded-full mr-2 bg-blue-500"></div>
+                                    <span className="text-xs text-gray-400">Stable Lending</span>
+                                  </div>
+                                  <span className="text-xs text-white font-medium">20%</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <div className="w-2.5 h-2.5 rounded-full mr-2 bg-amber-500"></div>
+                                    <span className="text-xs text-gray-400">AMM Pools</span>
+                                  </div>
+                                  <span className="text-xs text-white font-medium">30%</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <div className="w-2.5 h-2.5 rounded-full mr-2 bg-purple-500"></div>
+                                    <span className="text-xs text-gray-400">Leveraged Yield</span>
+                                  </div>
+                                  <span className="text-xs text-white font-medium">40%</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center">
+                                    <div className="w-2.5 h-2.5 rounded-full mr-2 bg-rose-500"></div>
+                                    <span className="text-xs text-gray-400">New Protocols</span>
+                                  </div>
+                                  <span className="text-xs text-white font-medium">10%</span>
+                                </div>
+                              </div>
+                            </div>
+                          </motion.div>
+                          
+                          {/* Estimated Returns */}
+                          <motion.div 
+                            className="rounded-lg p-3 border my-4 bg-purple-500/10 border-purple-500/30"
+                            initial={animateCard ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.9 }}
+                          >
+                            <div className="flex justify-between">
+                              <div className="text-sm text-gray-400">Estimated Return</div>
+                              <div className="text-white font-medium">
+                                $15.00
+                              </div>
+                            </div>
+                          </motion.div>
+                          
+                          {/* Action Buttons */}
+                          <motion.div 
+                            className="grid grid-cols-2 gap-3"
+                            initial={animateCard ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 1 }}
+                          >
+                            {/* Extend Lock Button */}
+                            <motion.button 
+                              className="py-2.5 px-4 rounded-lg font-medium transition-colors bg-purple-500/20 text-purple-300 hover:bg-purple-500/30 border border-purple-500/30"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                console.log("Extend lock clicked");
+                                setShowExtendLockModal(true);
+                              }}
+                              whileHover={{ scale: 1.03 }}
+                              whileTap={{ scale: 0.97 }}
+                            >
+                              <div className="flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+                                </svg>
+                                Extend Lock
+                              </div>
+                            </motion.button>
+
+                            {/* Continue Button */}
+                            <motion.button 
+                              className="py-2.5 px-4 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                console.log("Resume course clicked");
+                                setShowResumeModal(true);
+                              }}
+                              whileHover={{ scale: 1.03 }}
+                              whileTap={{ scale: 0.97 }}
+                            >
+                              <div className="flex items-center justify-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+                                </svg>
+                                Resume Course
+                              </div>
+                            </motion.button>
+                          </motion.div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                </AnimatePresence>
               ) : (
                 // Regular SubjectCard for other subjects or Solana 101 before locking
-              <SubjectCard
-                title={subject.title}
-                description={subject.description}
-                icon={subject.icon}
-                progress={subject.progress}
-                iconBg={subject.iconBg}
-                iconColor={subject.iconColor}
-                accentColor={subject.accentColor}
+                <SubjectCard
+                  title={subject.title}
+                  description={subject.description}
+                  icon={subject.icon}
+                  progress={subject.progress}
+                  iconBg={subject.iconBg}
+                  iconColor={subject.iconColor}
+                  accentColor={subject.accentColor}
                   onClick={() => handleCardClick(subject.title)}
                   showLockInLabel={subject.showLockInLabel && !hasLockedFunds}
                   showProgress={subject.showProgress}
                   showRiskLevel={subject.showRiskLevel}
                   riskLevel={subject.riskLevel}
+                  learningCategories={subject.learningCategories}
                 />
               )}
             </motion.div>
@@ -902,6 +1093,35 @@ const Homepage = () => {
                 >
                   <h2 className="text-2xl font-bold mb-2 text-center">Ready to lock-in?</h2>
                   <p className="text-center text-sm mb-6">Choose your risk level and lock-in period</p>
+                </motion.div>
+                
+                {/* Key Learning Features */}
+                <motion.div 
+                  className="mb-6"
+                  initial={{ y: 20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.15 }}
+                >
+                  <div className="bg-gray-700/50 p-4 rounded-lg">
+                    <h3 className="text-lg font-semibold text-white mb-2">What You'll Learn</h3>
+                    <div className="space-y-2">
+                      {subjects.find(s => s.title === "Solana 101").learningCategories.map((category, index) => (
+                        <div key={index} className="flex justify-between items-center">
+                          <div className="flex items-center">
+                            <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mr-2"></div>
+                            <span className="text-sm text-white">{category.title}</span>
+                          </div>
+                          <span className="text-xs text-blue-300">{category.completion}</span>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-3 text-xs text-gray-400 border-t border-gray-600 pt-2">
+                      Lock in funds to unlock all {subjects.find(s => s.title === "Solana 101").learningCategories.reduce((total, cat) => {
+                        const modules = parseInt(cat.completion.split(" ")[0]);
+                        return isNaN(modules) ? total : total + modules;
+                      }, 0)} learning modules
+                    </div>
+                  </div>
                 </motion.div>
                 
                 {/* Coin Selection */}
@@ -1269,6 +1489,202 @@ const Homepage = () => {
                   Resume Course
                 </motion.button>
               </motion.div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Extend Lock Modal */}
+      <AnimatePresence>
+        {showExtendLockModal && (
+          <motion.div 
+            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowExtendLockModal(false)}
+          >
+            <motion.div 
+              className="bg-gray-800 rounded-xl w-full max-w-md p-6 relative"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Close button */}
+              <button 
+                className="absolute top-4 right-4 text-gray-400 hover:text-white z-10"
+                onClick={() => setShowExtendLockModal(false)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              <motion.div 
+                className={`text-center ${
+                  lockedRiskLevel === 'low' ? 'text-blue-400' : 
+                  lockedRiskLevel === 'medium' ? 'text-amber-400' : 
+                  'text-purple-400'
+                }`}
+                initial={{ y: -20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                transition={{ delay: 0.1 }}
+              >
+                <div className={`${
+                  lockedRiskLevel === 'low' ? 'bg-blue-500/20' : 
+                  lockedRiskLevel === 'medium' ? 'bg-amber-500/20' : 
+                  'bg-purple-500/20'
+                } rounded-full w-16 h-16 mx-auto flex items-center justify-center mb-4`}>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                
+                <h2 className="text-2xl font-bold mb-2 text-white">Extend Your Lock Period</h2>
+                <p className="text-gray-300 mb-6">Choose how long you want to extend your commitment</p>
+              </motion.div>
+              
+              {/* Current Status */}
+              <motion.div 
+                className={`p-3 mb-6 rounded-lg ${
+                  lockedRiskLevel === 'low' ? 'bg-blue-500/10 border border-blue-500/30' : 
+                  lockedRiskLevel === 'medium' ? 'bg-amber-500/10 border border-amber-500/30' : 
+                  'bg-purple-500/10 border-purple-500/30'
+                }`}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <div className="flex justify-between mb-2">
+                  <span className="text-sm text-gray-400">Current Lock Period</span>
+                  <span className="text-sm font-medium text-white">
+                    {lockedPeriod === '1month' ? '1 Month' : 
+                     lockedPeriod === '3months' ? '3 Months' : 
+                     lockedPeriod === '6months' ? '6 Months' : '1 Year'}
+                  </span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-sm text-gray-400">Time Remaining</span>
+                  <span className={`text-sm font-medium ${
+                    lockedRiskLevel === 'low' ? 'text-blue-300' : 
+                    lockedRiskLevel === 'medium' ? 'text-amber-300' : 
+                    'text-purple-300'
+                  }`}>
+                    {lockedPeriod === '1month' ? '30 days' : 
+                     lockedPeriod === '3months' ? '90 days' : 
+                     lockedPeriod === '6months' ? '180 days' : '365 days'}
+                  </span>
+                </div>
+              </motion.div>
+              
+              {/* Extension Options */}
+              <div className="mb-6">
+                <label className="block text-sm font-medium text-gray-400 mb-2">
+                  Choose Extension Period
+                </label>
+                <div className="grid grid-cols-2 gap-3">
+                  {lockPeriods.map((period, index) => (
+                    <motion.div
+                      key={period.id}
+                      className={`p-3 border rounded-lg cursor-pointer transition-all ${
+                        selectedLockPeriod === period.id 
+                          ? lockedRiskLevel === 'low' 
+                            ? 'border-blue-500 bg-blue-500/20 text-white' 
+                            : lockedRiskLevel === 'medium'
+                              ? 'border-amber-500 bg-amber-500/20 text-white'
+                              : 'border-purple-500 bg-purple-500/20 text-white'
+                          : 'border-gray-600 bg-gray-700/30 text-gray-300 hover:bg-gray-700/50'
+                      }`}
+                      onClick={() => setSelectedLockPeriod(period.id)}
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 + (index * 0.1) }}
+                    >
+                      <div className="font-medium">{period.label}</div>
+                      <div className={`text-sm ${
+                        selectedLockPeriod === period.id 
+                          ? lockedRiskLevel === 'low'
+                            ? 'text-blue-300'
+                            : lockedRiskLevel === 'medium'
+                              ? 'text-amber-300'
+                              : 'text-purple-300'
+                          : 'text-gray-400'
+                      }`}>
+                        {period.displayRate}
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Estimated Future Returns */}
+              {selectedLockPeriod && (
+                <motion.div 
+                  className={`rounded-lg p-3 mb-6 ${
+                    lockedRiskLevel === 'low' ? 'bg-blue-500/10 border border-blue-500/30' : 
+                    lockedRiskLevel === 'medium' ? 'bg-amber-500/10 border border-amber-500/30' : 
+                    'bg-purple-500/10 border-purple-500/30'
+                  }`}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                >
+                  <div className="text-center">
+                    <div className="text-sm text-gray-400 mb-1">Total New Duration</div>
+                    <div className="text-xl font-bold text-white">
+                      {(lockedPeriod === '1month' && selectedLockPeriod === '1month') ? '2 Months' :
+                       (lockedPeriod === '1month' && selectedLockPeriod === '3months') ? '4 Months' :
+                       (lockedPeriod === '1month' && selectedLockPeriod === '6months') ? '7 Months' :
+                       (lockedPeriod === '1month' && selectedLockPeriod === '1year') ? '13 Months' :
+                       (lockedPeriod === '3months' && selectedLockPeriod === '1month') ? '4 Months' :
+                       (lockedPeriod === '3months' && selectedLockPeriod === '3months') ? '6 Months' :
+                       (lockedPeriod === '3months' && selectedLockPeriod === '6months') ? '9 Months' :
+                       (lockedPeriod === '3months' && selectedLockPeriod === '1year') ? '15 Months' :
+                       (lockedPeriod === '6months' && selectedLockPeriod === '1month') ? '7 Months' :
+                       (lockedPeriod === '6months' && selectedLockPeriod === '3months') ? '9 Months' :
+                       (lockedPeriod === '6months' && selectedLockPeriod === '6months') ? '12 Months' :
+                       (lockedPeriod === '6months' && selectedLockPeriod === '1year') ? '18 Months' :
+                       (lockedPeriod === '1year' && selectedLockPeriod === '1month') ? '13 Months' :
+                       (lockedPeriod === '1year' && selectedLockPeriod === '3months') ? '15 Months' :
+                       (lockedPeriod === '1year' && selectedLockPeriod === '6months') ? '18 Months' :
+                       '24 Months'}
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+              
+              {/* Confirm Button */}
+              <motion.button 
+                className={`w-full py-3 px-4 text-white font-medium rounded-lg transition-colors hover:opacity-90 ${
+                  selectedLockPeriod ? (
+                    lockedRiskLevel === 'low'
+                      ? 'bg-gradient-to-r from-blue-600 via-blue-500 to-blue-600'
+                      : lockedRiskLevel === 'medium'
+                        ? 'bg-gradient-to-r from-amber-600 via-amber-500 to-amber-600'
+                        : 'bg-gradient-to-r from-purple-600 via-purple-500 to-purple-600'
+                  ) : 'bg-gray-700 cursor-not-allowed'
+                }`}
+                onClick={() => {
+                  if (selectedLockPeriod) {
+                    // Update locked period
+                    setLockedPeriod(selectedLockPeriod);
+                    console.log("Extended lock period to:", selectedLockPeriod);
+                    setShowExtendLockModal(false);
+                  }
+                }}
+                disabled={!selectedLockPeriod}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                whileHover={selectedLockPeriod ? { scale: 1.03 } : {}}
+                whileTap={selectedLockPeriod ? { scale: 0.97 } : {}}
+              >
+                Confirm Extension
+              </motion.button>
             </motion.div>
           </motion.div>
         )}

@@ -14,7 +14,8 @@ const SubjectCard = ({
   showLockInLabel = false,
   showProgress = false,
   showRiskLevel = false,
-  riskLevel = 'low'
+  riskLevel = 'low',
+  learningCategories = []
 }) => {
   const [showRiskTooltip, setShowRiskTooltip] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -117,6 +118,35 @@ const SubjectCard = ({
             </button>
           </div>
         </div>
+        
+        {/* Learning Categories - show only when not collapsed and has categories */}
+        {!isCollapsed && learningCategories && learningCategories.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 }}
+            className="mb-4"
+          >
+            <h4 className="text-sm font-medium text-gray-400 mb-2">What you'll learn:</h4>
+            <div className="space-y-2">
+              {learningCategories.map((category, index) => (
+                <motion.div 
+                  key={index}
+                  className="bg-gray-700/30 rounded-lg p-2.5 flex justify-between items-center"
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.1 * (index + 1) }}
+                >
+                  <div className="flex items-center">
+                    <div className={`w-1.5 h-1.5 rounded-full ${iconColor} mr-2`}></div>
+                    <span className="text-sm text-white">{category.title}</span>
+                  </div>
+                  <div className={`text-xs ${iconColor}`}>{category.completion}</div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+        )}
         
         <AnimatePresence>
           {!isCollapsed && (
