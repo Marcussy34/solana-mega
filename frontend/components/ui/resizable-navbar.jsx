@@ -199,7 +199,7 @@ export const NavbarLogo = ({ asChild, children, className, ...props }) => {
           <div className="rounded-full bg-emerald-500 w-8 h-8 flex items-center justify-center text-white font-bold">
             S
           </div>
-          <span className="font-medium text-black dark:text-white">SkillStreak</span>
+          <span className="font-medium text-black dark:text-white">LockedIn</span>
         </>
       )}
     </div>

@@ -662,7 +662,7 @@ export default function TestPage() {
 
     return (
         <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
-            <h1>SkillStreak Backend Test Page</h1>
+            <h1>LockedIn Backend Test Page</h1>
 
             {/* Wallet Connect Button */}
             <div style={{ marginBottom: '20px', minHeight: '48px' }}>

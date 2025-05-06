@@ -108,7 +108,7 @@ export default function LandingPage() {
         <div className="relative z-10 container mx-auto px-4 text-left">
           <div className="max-w-2xl">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6">
-              SkillStreak
+              LockedIn
             </h1>
             <p className="text-xl md:text-2xl mb-8 text-gray-300">
               Learn, Earn & Build Habits on Solana. Master new skills while earning yield on your capital.
@@ -148,7 +148,7 @@ export default function LandingPage() {
                     </h3>
                     <p className="text-gray-400">
                       {item === 1 
-                        ? "Start by depositing USDC into your SkillStreak account. Your capital generates yield through Solana DeFi protocols."
+                        ? "Start by depositing USDC into your LockedIn account. Your capital generates yield through Solana DeFi protocols."
                         : item === 2 
                         ? "Choose from various learning tracks - crypto knowledge, coding skills, languages, finance & more."
                         : "Complete daily learning tasks. Earn rewards from yield plus bonus tokens for consistency."
@@ -166,7 +166,7 @@ export default function LandingPage() {
       <section className="py-12 bg-black">
         <div className="container mx-auto px-4">
           <h2 className="text-4xl md:text-5xl mb-8 text-left tracking-wide">
-            Get Started On SkillStreak
+            Get Started On LockedIn
           </h2>
           <div className="flex flex-col md:flex-row justify-between items-center gap-8">
             {/* Card 1: Pick a Wallet */}
@@ -396,7 +396,7 @@ export default function LandingPage() {
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row justify-between mb-8">
             <div className="mb-8 md:mb-0">
-              <h3 className="text-xl font-bold mb-4">SkillStreak</h3>
+              <h3 className="text-xl font-bold mb-4">LockedIn</h3>
               <p className="text-gray-400 max-w-xs">
                 Learn, Earn & Build Habits on Solana
               </p>
@@ -442,7 +442,7 @@ export default function LandingPage() {
           </div>
           <div className="border-t border-gray-800 pt-8 mt-8 flex flex-col md:flex-row justify-between items-center">
             <p className="text-gray-400 text-sm">
-              © 2025 SkillStreak. All rights reserved.
+              © 2025 LockedIn. All rights reserved.
             </p>
             <div className="flex space-x-6 mt-4 md:mt-0">
               {["Twitter", "Discord", "GitHub", "Telegram"].map((item, i) => (

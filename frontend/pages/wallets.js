@@ -48,7 +48,7 @@ export default function WalletsPage() {
         <div className="container mx-auto px-4 text-center">
           <h1 className="text-4xl md:text-6xl font-bold mb-6">Connect Your Wallet</h1>
           <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-12">
-            Choose your preferred wallet to connect with SkillStreak and start your learning journey.
+            Choose your preferred wallet to connect with LockedIn and start your learning journey.
           </p>
           
           {/* Wallet Options */}
@@ -124,7 +124,7 @@ export default function WalletsPage() {
       {/* Footer */}
       <footer className="bg-gray-900 py-8 mt-20">
         <div className="container mx-auto px-4 text-center text-gray-400">
-          <p>Â© 2025 SkillStreak. All rights reserved.</p>
+          <p>© 2025 LockedIn. All rights reserved.</p>
         </div>
       </footer>
     </div>
