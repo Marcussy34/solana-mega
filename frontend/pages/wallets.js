@@ -57,7 +57,7 @@ export default function WalletsPage() {
               <div key={wallet.id} className="w-full max-w-md">
                 <CardContainer className="w-full" containerClassName="!py-4 !w-full">
                   <CardBody className="!w-full !h-[380px]">
-                    <Link href="/homepage" className="block w-full h-full focus:outline-none">
+                    <Link href="/home" className="block w-full h-full focus:outline-none">
                       <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer"
                         style={{
                           background: wallet.gradient,
