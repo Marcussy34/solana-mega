@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import WelcomeHeader from '@/components/WelcomeHeader';
 import SubjectCard from '@/components/SubjectCard';
@@ -24,11 +24,27 @@ const Homepage = () => {
   const [animateCard, setAnimateCard] = useState(false);
   const [showSmartContractProgress, setShowSmartContractProgress] = useState(true); // For Smart Contract card
   const [showRiskTooltip, setShowRiskTooltip] = useState(false); // For risk tooltip
+  
+  // State for tracking total locked funds
+  const [totalLockedFunds, setTotalLockedFunds] = useState(500);
+  const [solana101AddedFunds, setSolana101AddedFunds] = useState(0);
+  const [smartContract101Funds] = useState(500); // Fixed amount for Smart Contract 101
 
   // Add state for collapsible custom cards
   const [solanaTileCollapsed, setSolanaTileCollapsed] = useState(false);
   const [smartContractTileCollapsed, setSmartContractTileCollapsed] = useState(true);
   
+  // Update total funds when lockedAmount changes
+  useEffect(() => {
+    // Update total funds to be smartContract101Funds (500) + lockedAmount (from modal)
+    const newTotal = smartContract101Funds + lockedAmount;
+    
+    // Only update if the value actually changed to prevent unnecessary re-renders
+    if (newTotal !== totalLockedFunds) {
+      setTotalLockedFunds(newTotal);
+    }
+  }, [smartContract101Funds, lockedAmount, totalLockedFunds]);
+
   const toggleSolanaTile = (e) => {
     e.stopPropagation(); // Prevent onClick from firing when clicking the toggle button
     setSolanaTileCollapsed(!solanaTileCollapsed);
@@ -38,6 +54,52 @@ const Homepage = () => {
     e.stopPropagation();
     setSmartContractTileCollapsed(!smartContractTileCollapsed);
   };
+
+  // Counter animation - gradually counts up to the target value
+  const CounterAnimation = ({ value }) => {
+    const [count, setCount] = useState(0);
+    const prevValueRef = useRef(value);
+    
+    useEffect(() => {
+      // Only trigger animation when value actually changes 
+      // and is different from the previous value
+      if (value !== prevValueRef.current) {
+        let start = prevValueRef.current; // Start from previous value
+        const target = parseInt(value);
+        const increment = start < target ? 1 : -1; // Increment or decrement based on direction
+        const difference = Math.abs(target - start);
+        const duration = 1000; // 1 second animation
+        const intervalTime = Math.max(5, Math.floor(duration / difference)); // At least 5ms between updates
+        
+        // Save new value as previous for next time
+        prevValueRef.current = target;
+        
+        const timer = setInterval(() => {
+          start = start + increment;
+          setCount(start);
+          if ((increment > 0 && start >= target) || (increment < 0 && start <= target)) {
+            clearInterval(timer);
+            setCount(target);
+          }
+        }, intervalTime);
+        
+        return () => clearInterval(timer);
+      }
+    }, [value]);
+    
+    return count.toLocaleString();
+  };
+  
+  // Load the user's added funds to Solana 101
+  useEffect(() => {
+    // Load funds added to Solana 101 from localStorage
+    const storedFunds = localStorage.getItem('solana101Funds');
+    if (storedFunds) {
+      const parsedFunds = parseInt(storedFunds, 10);
+      setSolana101AddedFunds(parsedFunds);
+      setTotalLockedFunds(smartContract101Funds + parsedFunds);
+    }
+  }, [smartContract101Funds]);
 
   const subjects = [
     {
@@ -189,27 +251,36 @@ const Homepage = () => {
       <div className="max-w-6xl mx-auto">
         <WelcomeHeader username="Alex" />
         
-        {/* Locked Funds Summary - Only visible when funds are locked */}
-        {hasLockedFunds && (
-          <motion.div 
-            className="mb-8 bg-gray-800/50 border border-blue-500/30 rounded-xl p-5"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.4 }}
-          >
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between">
-              <div>
-                <h3 className="text-lg font-medium text-white mb-1">Total Locked Funds</h3>
-                <p className="text-gray-400 text-sm">Committed to learning on LockedIn</p>
-              </div>
-              <div className="mt-4 sm:mt-0">
-                <div className="text-3xl font-bold text-white">${lockedAmount.toFixed(2)}</div>
-                <div className="text-sm text-gray-400">USDC</div>
+        {/* Total Locked Funds Counter */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.2 }}
+          className="mb-8 p-6 rounded-xl backdrop-blur-lg"
+          style={{ 
+            background: "linear-gradient(145deg, rgba(21, 128, 61, 0.15) 0%, rgba(5, 150, 105, 0.25) 100%)",
+            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3), inset 0 0 0 1px rgba(255, 255, 255, 0.1)",
+            border: "1px solid rgba(255, 255, 255, 0.1)"
+          }}
+        >
+          <div className="flex flex-col gap-2">
+            <div className="flex justify-between items-center">
+              <h3 className="text-lg text-gray-300 font-medium">Total Locked Funds</h3>
+              <div className="px-3 py-1 bg-emerald-500/20 rounded-full text-emerald-400 text-sm font-medium">
+                Committed to learning on LockedIn
               </div>
             </div>
-          </motion.div>
-        )}
+            
+            <div className="flex items-baseline">
+              <span className="text-4xl md:text-5xl font-bold text-white">
+                ${totalLockedFunds.toLocaleString()}
+              </span>
+              <span className="ml-2 text-emerald-400">USDC</span>
+            </div>
+          </div>
+        </motion.div>
         
+        {/* Grid layout for subject cards */}
         <motion.div 
           className="grid grid-cols-1 md:grid-cols-2 gap-6"
           initial={{ opacity: 0 }}
@@ -1402,6 +1473,9 @@ const Homepage = () => {
                       setLockedPeriod(selectedLockPeriod);
                       setHasLockedFunds(true);
                       setAnimateCard(true);
+                      
+                      // Update total locked funds
+                      setTotalLockedFunds(smartContract101Funds + parseFloat(amount));
                       
                       console.log("Locked funds:", {
                         coin: "USDC",

@@ -33,8 +33,6 @@ export default function LandingPage() {
   const scale = useTransform(scrollYProgress, [0, 0.8], [1.05, 1]);
   const translate = useTransform(scrollYProgress, [0, 0.9], [0, -100]);
 
-
-
   // Navbar items
   const navItems = [
     { name: "Features", link: "#features" },
