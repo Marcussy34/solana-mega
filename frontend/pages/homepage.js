@@ -3,11 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import WelcomeHeader from '@/components/WelcomeHeader';
 import SubjectCard from '@/components/SubjectCard';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
 
 // Remove the duplicate SubjectCard definition since we're already importing it
 // This was causing a conflict in the component name
 
 const Homepage = () => {
+  const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [showExtendLockModal, setShowExtendLockModal] = useState(false); // New state for extend lock modal
@@ -658,8 +660,8 @@ const Homepage = () => {
                               className="py-2.5 px-4 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                console.log("Resume course clicked");
-                                setShowResumeModal(true);
+                                console.log("Redirecting to learn page");
+                                router.push('/learn');
                               }}
                               whileHover={{ scale: 1.03 }}
                               whileTap={{ scale: 0.97 }}
@@ -668,7 +670,7 @@ const Homepage = () => {
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
                                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                                 </svg>
-                                Resume Course
+                                Resume
                               </div>
                             </motion.button>
                           </motion.div>
@@ -1013,8 +1015,8 @@ const Homepage = () => {
                               className="py-2.5 px-4 bg-green-500 hover:bg-green-600 text-white font-medium rounded-lg transition-colors"
                               onClick={(e) => {
                                 e.stopPropagation();
-                                console.log("Resume course clicked");
-                                setShowResumeModal(true);
+                                console.log("Redirecting to learn page");
+                                router.push('/learn');
                               }}
                               whileHover={{ scale: 1.03 }}
                               whileTap={{ scale: 0.97 }}
@@ -1023,7 +1025,7 @@ const Homepage = () => {
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
                                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                                 </svg>
-                                Resume Course
+                                Resume
                               </div>
                             </motion.button>
                           </motion.div>
@@ -1461,7 +1463,7 @@ const Homepage = () => {
               >
                 <div className="bg-green-500/20 rounded-full w-16 h-16 mx-auto flex items-center justify-center mb-4">
                   <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3 3a1 1 0 01-1.414 0L10 10.586l3.293-3.293a1 1 0 011.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
                   </svg>
                 </div>
                 
@@ -1482,11 +1484,12 @@ const Homepage = () => {
                   whileHover={{ scale: 1.03 }}
                   whileTap={{ scale: 0.97 }}
                   onClick={() => {
-                    console.log("Resuming Smart Contract 101 course");
+                    console.log("Redirecting to learn page");
                     setShowResumeModal(false);
+                    router.push('/learn');
                   }}
                 >
-                  Resume Course
+                  Resume
                 </motion.button>
               </motion.div>
             </motion.div>

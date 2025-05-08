@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useRouter } from 'next/router';
 
 const SubjectCard = ({ 
   title, 
@@ -17,6 +18,7 @@ const SubjectCard = ({
   riskLevel = 'low',
   learningCategories = []
 }) => {
+  const router = useRouter();
   const [showRiskTooltip, setShowRiskTooltip] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -189,8 +191,14 @@ const SubjectCard = ({
                       <button className="py-1.5 px-3 bg-gray-700/70 hover:bg-gray-700 text-gray-300 text-xs font-medium rounded transition-colors">
                         Reset Progress
                       </button>
-                      <button className="py-1.5 px-3 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors">
-                        Continue
+                      <button 
+                        className="py-1.5 px-3 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          router.push('/learn');
+                        }}
+                      >
+                        Resume
                       </button>
                     </div>
                   )}
