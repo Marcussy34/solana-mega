@@ -8,11 +8,12 @@ import { useRouter } from 'next/router';
 // Remove the duplicate SubjectCard definition since we're already importing it
 // This was causing a conflict in the component name
 
-const Homepage = () => {
+const Home = () => {
   const router = useRouter();
   const [showModal, setShowModal] = useState(false);
   const [showResumeModal, setShowResumeModal] = useState(false);
   const [showExtendLockModal, setShowExtendLockModal] = useState(false); // New state for extend lock modal
+  const [showWithdrawModal, setShowWithdrawModal] = useState(false); // New state for withdraw modal
   const [selectedLockPeriod, setSelectedLockPeriod] = useState(null);
   const [amount, setAmount] = useState('');
   const [estimates, setEstimates] = useState({});
@@ -22,32 +23,66 @@ const Homepage = () => {
   const [lockedRiskLevel, setLockedRiskLevel] = useState(null);
   const [lockedPeriod, setLockedPeriod] = useState(null);
   const [animateCard, setAnimateCard] = useState(false);
+  
+  // Add states for Smart Contract 101 card
+  const [hasSmartContractFunds, setHasSmartContractFunds] = useState(false); // If funds are locked for Smart Contract
+  const [smartContractAmount, setSmartContractAmount] = useState(0); // Amount locked for Smart Contract
+  
   const [showSmartContractProgress, setShowSmartContractProgress] = useState(true); // For Smart Contract card
   const [showRiskTooltip, setShowRiskTooltip] = useState(false); // For risk tooltip
   
   // State for tracking total locked funds
-  const [totalLockedFunds, setTotalLockedFunds] = useState(500);
+  const [totalLockedFunds, setTotalLockedFunds] = useState(0);
   const [solana101AddedFunds, setSolana101AddedFunds] = useState(0);
-  const [smartContract101Funds] = useState(500); // Fixed amount for Smart Contract 101
-
+  
   // Add state for collapsible custom cards
   const [solanaTileCollapsed, setSolanaTileCollapsed] = useState(false);
-  const [smartContractTileCollapsed, setSmartContractTileCollapsed] = useState(true);
+  const [smartContractTileCollapsed, setSmartContractTileCollapsed] = useState(false); // Changed to false so it's expanded by default
   
-  // Update total funds when lockedAmount changes
+  // Add states for withdrawal selection
+  const [selectedWithdrawalCourses, setSelectedWithdrawalCourses] = useState({
+    smartContract101: false,
+    solana101: false
+  });
+  const [withdrawalAmount, setWithdrawalAmount] = useState(0);
+
+  // Add state to track which course is selected for the lock-in modal
+  const [selectedCourse, setSelectedCourse] = useState(null);
+
+  // Add states for streaks
+  const [solanaStreak, setSolanaStreak] = useState(0); // Default 0 days streak for Solana
+  const [smartContractStreak, setSmartContractStreak] = useState(0); // Default 0 days streak for Smart Contract
+  const [streakResetHours, setStreakResetHours] = useState(24); // 24 hours remaining before streak resets
+
+  // Update total funds when amounts change
   useEffect(() => {
-    // Update total funds to be smartContract101Funds (500) + lockedAmount (from modal)
-    const newTotal = smartContract101Funds + lockedAmount;
+    // Calculate total from both cards
+    let newTotal = 0;
+    
+    // Add Smart Contract amount if funds are locked
+    if (hasSmartContractFunds) {
+      newTotal += smartContractAmount;
+    }
+    
+    // Add Solana 101 amount if funds are locked
+    if (hasLockedFunds) {
+      newTotal += lockedAmount;
+    }
     
     // Only update if the value actually changed to prevent unnecessary re-renders
     if (newTotal !== totalLockedFunds) {
       setTotalLockedFunds(newTotal);
     }
-  }, [smartContract101Funds, lockedAmount, totalLockedFunds]);
+  }, [hasSmartContractFunds, smartContractAmount, hasLockedFunds, lockedAmount, totalLockedFunds]);
 
   const toggleSolanaTile = (e) => {
     e.stopPropagation(); // Prevent onClick from firing when clicking the toggle button
     setSolanaTileCollapsed(!solanaTileCollapsed);
+    
+    // Set animateCard to true when expanding the card
+    if (solanaTileCollapsed) {
+      setAnimateCard(true);
+    }
   };
   
   const toggleSmartContractTile = (e) => {
@@ -97,9 +132,17 @@ const Homepage = () => {
     if (storedFunds) {
       const parsedFunds = parseInt(storedFunds, 10);
       setSolana101AddedFunds(parsedFunds);
-      setTotalLockedFunds(smartContract101Funds + parsedFunds);
+      
+      // Update total locked funds
+      let newTotal = 0;
+      if (hasSmartContractFunds) {
+        newTotal += smartContractAmount;
+      }
+      newTotal += parsedFunds;
+      
+      setTotalLockedFunds(newTotal);
     }
-  }, [smartContract101Funds]);
+  }, [smartContractAmount, hasSmartContractFunds]);
 
   const subjects = [
     {
@@ -126,13 +169,14 @@ const Homepage = () => {
     {
       title: "Smart Contract 101",
       description: "Explore the fundamentals of smart contracts and blockchain programming",
-      progress: 48,
+      progress: 0, // Changed from 48 to 0
       iconBg: "bg-purple-500/20",
       iconColor: "text-purple-400",
       accentColor: "bg-purple-500",
       riskLevel: "high",
       showRiskLevel: true,
       showProgress: true,
+      showLockInLabel: true, // Add this to enable lock-in label when reset
       icon: (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-400" viewBox="0 0 20 20" fill="currentColor">
           <path fillRule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
@@ -237,13 +281,54 @@ const Homepage = () => {
   };
 
   const handleCardClick = (title) => {
-    if (title === "Solana 101") {
+    if (title === "Solana 101" && !hasLockedFunds) {
+      // Open lock-in modal for Solana 101
       setShowModal(true);
-    } else if (title === "Smart Contract 101") {
+      setSelectedCourse("Solana 101");
+      // Reset modal selections
+      setSelectedRiskLevel('low');
+      setSelectedLockPeriod(null);
+      setAmount('');
+    } else if (title === "Smart Contract 101" && !hasSmartContractFunds) {
+      // Open lock-in modal for Smart Contract 101
+      setShowModal(true);
+      setSelectedCourse("Smart Contract 101");
+      // Reset modal selections
+      setSelectedRiskLevel('high'); // Default to high risk for Smart Contract 101
+      setSelectedLockPeriod(null);
+      setAmount('');
+    } else if (title === "Smart Contract 101" && hasSmartContractFunds) {
+      // Open resume modal for Smart Contract 101
       setShowResumeModal(true);
+    } else if (title === "Solana 101" && hasLockedFunds) {
+      // Handle Solana 101 with locked funds
+      // This is now handled by the tile collapse toggle
     } else {
       console.log(`Clicked on ${title}`);
     }
+  };
+
+  // Calculate withdrawal amount based on selected courses
+  useEffect(() => {
+    let amount = 0;
+    
+    if (selectedWithdrawalCourses.smartContract101 && hasSmartContractFunds) {
+      amount += smartContractAmount * 0.8; // 80% after 20% penalty
+    }
+    
+    if (selectedWithdrawalCourses.solana101 && hasLockedFunds) {
+      amount += lockedAmount * 0.8; // 80% after 20% penalty
+    }
+    
+    setWithdrawalAmount(amount);
+  }, [selectedWithdrawalCourses, smartContractAmount, hasSmartContractFunds, lockedAmount, hasLockedFunds]);
+
+  // Toggle course selection for withdrawal
+  const toggleCourseSelection = (course) => {
+    setSelectedWithdrawalCourses(prev => ({
+      ...prev,
+      [course]: !prev[course]
+    }));
   };
 
   return (
@@ -277,6 +362,22 @@ const Homepage = () => {
               </span>
               <span className="ml-2 text-emerald-400">USDC</span>
             </div>
+            
+            {/* Add Withdraw Early button */}
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="mt-4 py-2 px-4 bg-red-500/20 text-red-300 border border-red-500/30 rounded-lg hover:bg-red-500/30 transition-colors flex items-center justify-center"
+              onClick={() => setShowWithdrawModal(true)}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5 4a3 3 0 00-3 3v6a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H5zm-1 9v-1h5v2H5a1 1 0 01-1-1zm7 1h4a1 1 0 001-1v-1h-5v2zm0-4h5V8h-5v2zM9 8H4v2h5V8z" clipRule="evenodd" />
+              </svg>
+              Withdraw Early
+            </motion.button>
           </div>
         </motion.div>
         
@@ -603,6 +704,28 @@ const Homepage = () => {
                             </div>
                           </motion.div>
                           
+                          {/* Learning Streak - NEW ADDITION */}
+                          <motion.div 
+                            className="mb-4 bg-green-500/10 border border-green-500/30 rounded-lg p-2.5"
+                            initial={animateCard ? { opacity: 0, y: 10 } : { opacity: 1, y: 0 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 1.2 }}
+                          >
+                            <div className="flex justify-between items-center mb-2">
+                              <div className="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-400 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clipRule="evenodd" />
+                                </svg>
+                                <div className="text-sm font-medium text-green-400">Learning Streak</div>
+                              </div>
+                              <div className="text-white font-bold">{solanaStreak} days</div>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <div className="text-xs text-gray-400">Time until streak resets</div>
+                              <div className="text-xs text-green-400">{streakResetHours} hours</div>
+                            </div>
+                          </motion.div>
+                          
                           {/* Grid layout for fund details and asset allocation */}
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {/* Left column: Amount, Risk Level, Lock Period */}
@@ -750,8 +873,8 @@ const Homepage = () => {
                     </AnimatePresence>
                   </div>
                 </AnimatePresence>
-              ) : subject.title === "Smart Contract 101" && showSmartContractProgress ? (
-                // Custom card for Smart Contract 101
+              ) : subject.title === "Smart Contract 101" && hasSmartContractFunds ? (
+                // Custom card for Smart Contract 101 with funds
                 <AnimatePresence>
                   <div 
                     className="bg-gray-800 rounded-xl p-6 shadow-lg border border-purple-500/50 hover:border-purple-500 transition-colors cursor-pointer"
@@ -943,7 +1066,7 @@ const Homepage = () => {
                           >
                             <div className="flex justify-between items-center text-sm mb-1">
                               <span className="text-gray-400">Course Progress</span>
-                              <span className="font-medium text-purple-300">48%</span>
+                              <span className="font-medium text-purple-300">0%</span>
                             </div>
                             <motion.div 
                               className="h-2 bg-gray-700/60 rounded-full overflow-hidden"
@@ -953,15 +1076,15 @@ const Homepage = () => {
                             >
                               <motion.div 
                                 className="h-full rounded-full bg-purple-500"
-                                style={{ width: '48%' }}
-                                initial={animateCard ? { width: "0%" } : { width: "48%" }}
-                                animate={{ width: "48%" }}
+                                style={{ width: '0%' }}
+                                initial={animateCard ? { width: "0%" } : { width: "0%" }}
+                                animate={{ width: "0%" }}
                                 transition={{ delay: 0.9, duration: 0.7 }}
                               />
                             </motion.div>
                           </motion.div>
                           
-                          {/* Time Left */}
+                          {/* Time Left for Smart Contract 101 */}
                           <motion.div 
                             className="mb-4 bg-gray-700/30 rounded-lg p-2.5 flex justify-between items-center"
                             initial={animateCard ? { opacity: 0, y: 20 } : { opacity: 1, y: 0 }}
@@ -971,6 +1094,28 @@ const Homepage = () => {
                             <div className="text-sm text-gray-400">Time Remaining</div>
                             <div className="text-sm font-medium text-purple-300">
                               45 days
+                            </div>
+                          </motion.div>
+                          
+                          {/* Learning Streak for Smart Contract 101 - NEW ADDITION */}
+                          <motion.div 
+                            className="mb-4 bg-green-500/10 border border-green-500/30 rounded-lg p-2.5"
+                            initial={animateCard ? { opacity: 0, y: 10 } : { opacity: 1, y: 0 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: 0.8 }}
+                          >
+                            <div className="flex justify-between items-center mb-2">
+                              <div className="flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-green-400 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clipRule="evenodd" />
+                                </svg>
+                                <div className="text-sm font-medium text-green-400">Learning Streak</div>
+                              </div>
+                              <div className="text-white font-bold">{smartContractStreak} days</div>
+                            </div>
+                            <div className="flex justify-between items-center">
+                              <div className="text-xs text-gray-400">Time until streak resets</div>
+                              <div className="text-xs text-green-400">{streakResetHours} hours</div>
                             </div>
                           </motion.div>
                           
@@ -985,7 +1130,7 @@ const Homepage = () => {
                             <div>
                               <div className="mb-4">
                                 <div className="text-sm text-gray-400 mb-1">Locked Amount</div>
-                                <div className="text-xl font-bold text-white">$500</div>
+                                <div className="text-xl font-bold text-white">${smartContractAmount}</div>
                               </div>
                               
                               <div className="grid grid-cols-2 gap-3">
@@ -1106,7 +1251,7 @@ const Homepage = () => {
                   </div>
                 </AnimatePresence>
               ) : (
-                // Regular SubjectCard for other subjects or Solana 101 before locking
+                // Regular SubjectCard for other subjects or cards that have been reset
                 <SubjectCard
                   title={subject.title}
                   description={subject.description}
@@ -1116,7 +1261,9 @@ const Homepage = () => {
                   iconColor={subject.iconColor}
                   accentColor={subject.accentColor}
                   onClick={() => handleCardClick(subject.title)}
-                  showLockInLabel={subject.showLockInLabel && !hasLockedFunds}
+                  showLockInLabel={subject.showLockInLabel && 
+                    ((subject.title === "Solana 101" && !hasLockedFunds) || 
+                     (subject.title === "Smart Contract 101" && !hasSmartContractFunds))}
                   showProgress={subject.showProgress}
                   showRiskLevel={subject.showRiskLevel}
                   riskLevel={subject.riskLevel}
@@ -1164,7 +1311,9 @@ const Homepage = () => {
                   animate={{ y: 0, opacity: 1 }}
                   transition={{ delay: 0.1 }}
                 >
-                  <h2 className="text-2xl font-bold mb-2 text-center">Ready to lock-in?</h2>
+                  <h2 className="text-2xl font-bold mb-2 text-center">
+                    {selectedCourse ? `Lock in funds for ${selectedCourse}` : "Ready to lock-in?"}
+                  </h2>
                   <p className="text-center text-sm mb-6">Choose your risk level and lock-in period</p>
                 </motion.div>
                 
@@ -1178,7 +1327,8 @@ const Homepage = () => {
                   <div className="bg-gray-700/50 p-4 rounded-lg">
                     <h3 className="text-lg font-semibold text-white mb-2">What You'll Learn</h3>
                     <div className="space-y-2">
-                      {subjects.find(s => s.title === "Solana 101").learningCategories.map((category, index) => (
+                      {(subjects.find(s => s.title === selectedCourse)?.learningCategories || [])
+                      .map((category, index) => (
                         <div key={index} className="flex justify-between items-center">
                           <div className="flex items-center">
                             <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mr-2"></div>
@@ -1189,7 +1339,7 @@ const Homepage = () => {
                       ))}
                     </div>
                     <div className="mt-3 text-xs text-gray-400 border-t border-gray-600 pt-2">
-                      Lock in funds to unlock all {subjects.find(s => s.title === "Solana 101").learningCategories.reduce((total, cat) => {
+                      Lock in funds to unlock all {subjects.find(s => s.title === selectedCourse)?.learningCategories.reduce((total, cat) => {
                         const modules = parseInt(cat.completion.split(" ")[0]);
                         return isNaN(modules) ? total : total + modules;
                       }, 0)} learning modules
@@ -1467,23 +1617,34 @@ const Homepage = () => {
                   }`}
                   onClick={() => {
                     if (amount && selectedLockPeriod) {
-                      // Save locked funds info
-                      setLockedAmount(parseFloat(amount));
-                      setLockedRiskLevel(selectedRiskLevel);
-                      setLockedPeriod(selectedLockPeriod);
-                      setHasLockedFunds(true);
+                      // Determine which course we're locking funds for based on selectedCourse
+                      if (selectedCourse === "Solana 101") {
+                        // Save locked funds info for Solana 101
+                        setLockedAmount(parseFloat(amount));
+                        setLockedRiskLevel(selectedRiskLevel);
+                        setLockedPeriod(selectedLockPeriod);
+                        setHasLockedFunds(true);
+                        setSolanaTileCollapsed(false); // Ensure card is expanded after locking funds
+                      } else if (selectedCourse === "Smart Contract 101") {
+                        // Save locked funds info for Smart Contract 101
+                        setSmartContractAmount(parseFloat(amount));
+                        setHasSmartContractFunds(true);
+                        setSmartContractTileCollapsed(false); // Ensure card is expanded after locking funds
+                      }
+                      
                       setAnimateCard(true);
                       
-                      // Update total locked funds
-                      setTotalLockedFunds(smartContract101Funds + parseFloat(amount));
+                      // Update total locked funds happens automatically via the useEffect
                       
                       console.log("Locked funds:", {
+                        course: selectedCourse,
                         coin: "USDC",
                         amount,
                         riskLevel: selectedRiskLevel,
                         lockPeriod: selectedLockPeriod,
                         estimatedReturn: calculateEstimatedReturn()
                       });
+                      
                       setShowModal(false);
                     }
                   }}
@@ -1766,8 +1927,320 @@ const Homepage = () => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Withdraw Funds Modal */}
+      <AnimatePresence>
+        {showWithdrawModal && (
+          <motion.div 
+            className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setShowWithdrawModal(false)}
+          >
+            <motion.div 
+              className="bg-gray-800 rounded-xl w-full max-w-lg p-6 relative"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+              onClick={e => e.stopPropagation()}
+            >
+              {/* Close button */}
+              <button 
+                className="absolute top-4 right-4 text-gray-400 hover:text-white z-10"
+                onClick={() => setShowWithdrawModal(false)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+
+              <div className="max-h-[80vh] overflow-y-auto pr-2">
+                <motion.div
+                  initial={{ y: -20, opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  transition={{ delay: 0.1 }}
+                >
+                  <div className="bg-red-500/20 rounded-full w-16 h-16 mx-auto flex items-center justify-center mb-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                  
+                  <h2 className="text-2xl font-bold mb-2 text-white text-center">Early Withdrawal</h2>
+                  <p className="text-center text-gray-400 mb-6">
+                    Select the courses you want to withdraw funds from.
+                  </p>
+
+                  {/* Warning Box */}
+                  <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-4 mb-6">
+                    <div className="flex items-start">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-400 mr-3 mt-0.5 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                      </svg>
+                      <p className="text-red-300 text-sm">
+                        Early withdrawal incurs a 20% penalty on your locked funds and forfeits all potential earnings. Your learning progress will not remain intact, and will permanently reset.
+                      </p>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Courses with Locked Funds */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="space-y-4 mb-6"
+                >
+                  <div className="flex justify-between items-center mb-3">
+                    <h3 className="text-lg font-medium text-white mb-3">Your Locked Courses</h3>
+                    {(hasSmartContractFunds || hasLockedFunds) && (
+                      <button 
+                        className="text-sm text-blue-400 hover:text-blue-300"
+                        onClick={() => {
+                          const allSelected = 
+                            (!hasSmartContractFunds || selectedWithdrawalCourses.smartContract101) && 
+                            (!hasLockedFunds || selectedWithdrawalCourses.solana101);
+                          
+                          setSelectedWithdrawalCourses({
+                            smartContract101: !allSelected && hasSmartContractFunds,
+                            solana101: !allSelected && hasLockedFunds
+                          });
+                        }}
+                      >
+                        {(hasSmartContractFunds && selectedWithdrawalCourses.smartContract101) && 
+                         (hasLockedFunds && selectedWithdrawalCourses.solana101)
+                          ? 'Deselect All' : 'Select All'}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Show message when no courses have funds locked */}
+                  {!hasSmartContractFunds && !hasLockedFunds && (
+                    <div className="bg-gray-700/30 rounded-lg p-8 text-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-500 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                      </svg>
+                      <h4 className="text-lg font-medium text-gray-300 mb-2">No Locked Funds</h4>
+                      <p className="text-gray-400 text-sm">
+                        Lock funds in a course to access early withdrawal options.
+                      </p>
+                    </div>
+                  )}
+
+                  {/* Smart Contract 101 - Only show if hasSmartContractFunds is true */}
+                  {hasSmartContractFunds && (
+                    <div className="ml-3 mr-0">
+                      <div 
+                        className={`bg-gray-700/50 rounded-lg overflow-hidden cursor-pointer transition-all w-[calc(100%-3px)] ${
+                          selectedWithdrawalCourses.smartContract101 
+                            ? 'ring-2 ring-purple-500 shadow-lg shadow-purple-500/10'
+                            : 'hover:bg-gray-700/60'
+                        }`}
+                        onClick={() => toggleCourseSelection('smartContract101')}
+                      >
+                        <div className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <div className="w-10 h-10 bg-purple-500/20 rounded-full flex items-center justify-center mr-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-purple-400" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-white">Smart Contract 101</h4>
+                                <div className="flex items-center mt-1">
+                                  <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded">High Risk</span>
+                                  <span className="text-xs text-gray-400 ml-2">3 Months Lock</span>
+                                  <span className="text-xs text-gray-400 ml-2">45 Days Left</span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-white font-medium">${smartContractAmount}</div>
+                              <div className="text-xs text-red-400">-${(smartContractAmount * 0.2).toFixed(2)} penalty</div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="bg-gray-700 px-4 py-2 flex justify-between">
+                          <span className="text-sm text-gray-400">Withdrawable Amount</span>
+                          <span className="text-sm font-medium text-white">${(smartContractAmount * 0.8).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Solana 101 - Only show if hasLockedFunds is true */}
+                  {hasLockedFunds && (
+                    <div className="ml-3 mr-0">
+                      <div 
+                        className={`bg-gray-700/50 rounded-lg overflow-hidden cursor-pointer transition-all w-[calc(100%-3px)] ${
+                          selectedWithdrawalCourses.solana101 
+                            ? `ring-2 ${
+                                lockedRiskLevel === 'low' ? 'ring-blue-500 shadow-blue-500/10' : 
+                                lockedRiskLevel === 'medium' ? 'ring-amber-500 shadow-amber-500/10' : 
+                                'ring-purple-500 shadow-purple-500/10'
+                              } shadow-lg`
+                            : 'hover:bg-gray-700/60'
+                        }`}
+                        onClick={() => toggleCourseSelection('solana101')}
+                      >
+                        <div className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center">
+                              <div className={`w-10 h-10 ${
+                                lockedRiskLevel === 'low' ? 'bg-blue-500/20' : 
+                                lockedRiskLevel === 'medium' ? 'bg-amber-500/20' : 
+                                'bg-purple-500/20'
+                              } rounded-full flex items-center justify-center mr-3`}>
+                                <svg xmlns="http://www.w3.org/2000/svg" className={`h-5 w-5 ${
+                                  lockedRiskLevel === 'low' ? 'text-blue-400' : 
+                                  lockedRiskLevel === 'medium' ? 'text-amber-400' : 
+                                  'text-purple-400'
+                                }`} viewBox="0 0 20 20" fill="currentColor">
+                                  <path d="M11 17a1 1 0 001.447.894l4-2A1 1 0 0017 15V9.236a1 1 0 00-1.447-.894l-4 2a1 1 0 00-.553.894V17zM15.211 6.276a1 1 0 000-1.788l-4.764-2.382a1 1 0 00-.894 0L4.789 4.488a1 1 0 000 1.788l4.764 2.382a1 1 0 00.894 0l4.764-2.382zM4.447 8.342A1 1 0 003 9.236V15a1 1 0 00.553.894l4 2A1 1 0 009 17v-5.764a1 1 0 00-.553-.894l-4-2z" />
+                                </svg>
+                              </div>
+                              <div>
+                                <h4 className="font-medium text-white">Solana 101</h4>
+                                <div className="flex items-center mt-1">
+                                  <span className={`text-xs ${
+                                    lockedRiskLevel === 'low' ? 'bg-blue-500/20 text-blue-300' : 
+                                    lockedRiskLevel === 'medium' ? 'bg-amber-500/20 text-amber-300' : 
+                                    'bg-purple-500/20 text-purple-300'
+                                  } px-2 py-0.5 rounded`}>
+                                    {lockedRiskLevel === 'low' ? 'Low Risk' : 
+                                     lockedRiskLevel === 'medium' ? 'Medium Risk' : 'High Risk'}
+                                  </span>
+                                  <span className="text-xs text-gray-400 ml-2">
+                                    {lockedPeriod === '1month' ? '1 Month' : 
+                                     lockedPeriod === '3months' ? '3 Months' : 
+                                     lockedPeriod === '6months' ? '6 Months' : '1 Year'} Lock
+                                  </span>
+                                  <span className="text-xs text-gray-400 ml-2">
+                                    {lockedPeriod === '1month' ? '30' : 
+                                     lockedPeriod === '3months' ? '90' : 
+                                     lockedPeriod === '6months' ? '180' : '365'} Days Left
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-white font-medium">${lockedAmount}</div>
+                              <div className="text-xs text-red-400">-${(lockedAmount * 0.2).toFixed(2)} penalty</div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="bg-gray-700 px-4 py-2 flex justify-between">
+                          <span className="text-sm text-gray-400">Withdrawable Amount</span>
+                          <span className="text-sm font-medium text-white">${(lockedAmount * 0.8).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+
+                {/* Summary Box */}
+                {(hasSmartContractFunds || hasLockedFunds) && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.4 }}
+                    className="bg-gray-700/60 rounded-lg p-4 mb-6"
+                  >
+                    <div className="text-lg font-medium text-white mb-3">Withdrawal Summary</div>
+                    
+                    {selectedWithdrawalCourses.smartContract101 && hasSmartContractFunds && (
+                      <div className="flex justify-between mb-2">
+                        <span className="text-gray-400">Smart Contract 101</span>
+                        <span className="text-white">${(smartContractAmount * 0.8).toFixed(2)}</span>
+                      </div>
+                    )}
+                    
+                    {selectedWithdrawalCourses.solana101 && hasLockedFunds && (
+                      <div className="flex justify-between mb-2">
+                        <span className="text-gray-400">Solana 101</span>
+                        <span className="text-white">${(lockedAmount * 0.8).toFixed(2)}</span>
+                      </div>
+                    )}
+                    
+                    <div className="border-t border-gray-600 mt-2 pt-2 flex justify-between">
+                      <span className="text-gray-300 font-medium">Total Withdrawal Amount</span>
+                      <span className="text-white font-bold">${withdrawalAmount.toFixed(2)}</span>
+                    </div>
+                  </motion.div>
+                )}
+
+                {/* Confirmation Buttons */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="grid grid-cols-2 gap-3"
+                >
+                  <motion.button
+                    className="py-2.5 px-4 bg-gray-700 text-white font-medium rounded-lg transition-colors hover:bg-gray-600"
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={() => setShowWithdrawModal(false)}
+                  >
+                    Cancel
+                  </motion.button>
+
+                  <motion.button
+                    className={`py-2.5 px-4 text-white font-medium rounded-lg transition-colors
+                      ${withdrawalAmount > 0 
+                        ? 'bg-red-500/80 hover:bg-red-500' 
+                        : 'bg-gray-600 cursor-not-allowed opacity-70'}`}
+                    whileHover={withdrawalAmount > 0 ? { scale: 1.03 } : {}}
+                    whileTap={withdrawalAmount > 0 ? { scale: 0.97 } : {}}
+                    onClick={() => {
+                      if (withdrawalAmount > 0) {
+                        console.log("Processing withdrawal:", {
+                          courses: selectedWithdrawalCourses,
+                          amount: withdrawalAmount
+                        });
+                        
+                        // Reset cards based on selection
+                        if (selectedWithdrawalCourses.smartContract101) {
+                          // Reset Smart Contract 101 to default state with lock-in button
+                          setHasSmartContractFunds(false);
+                          setSmartContractAmount(0);
+                        }
+                        
+                        if (selectedWithdrawalCourses.solana101 && hasLockedFunds) {
+                          // Reset Solana 101 to default state with lock-in button
+                          setHasLockedFunds(false);
+                          setLockedAmount(0);
+                          setLockedPeriod(null);
+                          setLockedRiskLevel(null);
+                        }
+                        
+                        // Update total locked funds (this will happen automatically via the useEffect)
+                        
+                        // Close the modal
+                        setShowWithdrawModal(false);
+                        
+                        // Reset selection state for next time
+                        setSelectedWithdrawalCourses({
+                          smartContract101: false,
+                          solana101: false
+                        });
+                      }
+                    }}
+                    disabled={withdrawalAmount === 0}
+                  >
+                    Confirm Withdrawal
+                  </motion.button>
+                </motion.div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
 
-export default Homepage;
+export default Home;
