@@ -273,62 +273,120 @@ export default function BettingPage() {
                     {!isLoading && openMarkets.length === 0 && <p>No open markets found. Check back later or start a new course on the test page!</p>}
                     
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
-                        {openMarkets.map((market) => (
-                            <div key={market.publicKey.toBase58()} style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '15px', background: selectedMarket?.publicKey.equals(market.publicKey) ? '#e6f7ff' : '#fff' }}>
-                                <h3>Market: {formatAddress(market.publicKey)}</h3>
-                                <p><strong>User to Bet On:</strong> {formatAddress(market.userBeingBetOn)}</p>
-                                <p><strong>Market Creator:</strong> {formatAddress(market.marketCreator)}</p>
-                                <p><strong>Betting Ends:</strong> {formatTimestamp(market.bettingEndsTimestamp)}</p>
-                                <p><strong>Task Deadline:</strong> {formatTimestamp(market.taskDeadlineTimestamp)}</p>
-                                <p><strong>Pool (Long):</strong> {(market.totalLongAmount.toNumber() / 1_000_000).toFixed(2)} USDC</p>
-                                <p><strong>Pool (Short):</strong> {(market.totalShortAmount.toNumber() / 1_000_000).toFixed(2)} USDC</p>
-                                <p><strong>Platform Fee:</strong> {(market.platformFeeBasisPoints / 100).toFixed(2)}%</p>
-                                <button onClick={() => setSelectedMarket(market)} style={{ padding: '8px 12px', marginTop: '10px', width: '100%' }} disabled={isLoading}>
-                                    {selectedMarket?.publicKey.equals(market.publicKey) ? 'Selected' : 'Select to Bet'}
-                                </button>
-                            </div>
-                        ))}
+                        {openMarkets.map((market) => {
+                            // ADDED: Client-side check for betting window
+                            const nowSec = Date.now() / 1000;
+                            const isBettingClosedClientSide = market.bettingEndsTimestamp.toNumber() < nowSec;
+                            const isCurrentlySelected = selectedMarket?.publicKey.equals(market.publicKey);
+
+                            return (
+                                // MODIFIED: Background based on betting status
+                                <div key={market.publicKey.toBase58()} style={{ border: '1px solid #ddd', borderRadius: '8px', padding: '15px', background: isCurrentlySelected ? '#e6f7ff' : (isBettingClosedClientSide ? '#f0f0f0' : '#fff') }}>
+                                    <h3>Market: {formatAddress(market.publicKey)}</h3>
+                                    <p><strong>User to Bet On:</strong> {formatAddress(market.userBeingBetOn)}</p>
+                                    <p><strong>Market Creator:</strong> {formatAddress(market.marketCreator)}</p>
+                                    <p><strong>Betting Ends:</strong> {formatTimestamp(market.bettingEndsTimestamp)}</p>
+                                    <p><strong>Task Deadline:</strong> {formatTimestamp(market.taskDeadlineTimestamp)}</p>
+                                    <p><strong>Pool (Long):</strong> {(market.totalLongAmount.toNumber() / 1_000_000).toFixed(2)} USDC</p>
+                                    <p><strong>Pool (Short):</strong> {(market.totalShortAmount.toNumber() / 1_000_000).toFixed(2)} USDC</p>
+                                    <p><strong>Platform Fee:</strong> {(market.platformFeeBasisPoints / 100).toFixed(2)}%</p>
+                                    {/* MODIFIED: Button behavior and appearance */}
+                                    <button 
+                                        onClick={() => !isBettingClosedClientSide && setSelectedMarket(market)} 
+                                        style={{
+                                            padding: '8px 12px', 
+                                            marginTop: '10px', 
+                                            width: '100%',
+                                            cursor: isBettingClosedClientSide ? 'not-allowed' : 'pointer',
+                                            backgroundColor: isBettingClosedClientSide ? '#ccc' : (isCurrentlySelected ? '#007bff' : '#6c757d'),
+                                            color: isBettingClosedClientSide ? '#666' : '#fff',
+                                            border: 'none',
+                                            borderRadius: '4px'
+                                        }}
+                                        disabled={isLoading || isBettingClosedClientSide}
+                                    >
+                                        {isBettingClosedClientSide ? 'Betting Closed' : (isCurrentlySelected ? 'Selected' : 'Select to Bet')}
+                                    </button>
+                                </div>
+                            );
+                        })}
                     </div>
 
-                    {selectedMarket && (
-                        <div style={{ marginTop: '30px', padding: '20px', border: '1px solid #007bff', borderRadius: '8px', background: '#f8f9fa' }}>
-                            <h2>Bet on Market: {formatAddress(selectedMarket.publicKey)}</h2>
-                            <p><strong>Betting on User:</strong> {formatAddress(selectedMarket.userBeingBetOn)}</p>
-                            <div style={{ margin: '10px 0' }}>
-                                <label htmlFor="betAmount" style={{ marginRight: '10px' }}>Amount (USDC):</label>
-                                <input
-                                    type="number"
-                                    id="betAmount"
-                                    value={betAmount}
-                                    onChange={(e) => setBetAmount(e.target.value)}
-                                    min="0.000001"
-                                    step="0.000001"
-                                    disabled={isLoading}
-                                    style={{ padding: '8px', color: '#000' }}
-                                />
-                            </div>
-                            <div style={{ margin: '10px 0' }}>
-                                <label style={{ marginRight: '10px' }}>Position:</label>
+                    {/* MODIFIED: Selected market form to handle betting closed state */}
+                    {selectedMarket && (() => {
+                        const nowSec = Date.now() / 1000;
+                        const isSelectedMarketBettingClosed = selectedMarket.bettingEndsTimestamp.toNumber() < nowSec;
+
+                        return (
+                            <div style={{ marginTop: '30px', padding: '20px', border: isSelectedMarketBettingClosed ? '1px solid #dc3545' : '1px solid #007bff', borderRadius: '8px', background: '#f8f9fa' }}>
+                                <h2>Bet on Market: {formatAddress(selectedMarket.publicKey)}</h2>
+                                <p><strong>Betting on User:</strong> {formatAddress(selectedMarket.userBeingBetOn)}</p>
+                                
+                                {isSelectedMarketBettingClosed && (
+                                    <p style={{ color: 'red', fontWeight: 'bold' }}>Betting for this market has ended.</p>
+                                )}
+                                
+                                <div style={{ margin: '10px 0' }}>
+                                    <label htmlFor="betAmount" style={{ marginRight: '10px' }}>Amount (USDC):</label>
+                                    <input
+                                        type="number"
+                                        id="betAmount"
+                                        value={betAmount}
+                                        onChange={(e) => setBetAmount(e.target.value)}
+                                        min="0.000001"
+                                        step="0.000001"
+                                        disabled={isLoading || isSelectedMarketBettingClosed}
+                                        style={{ padding: '8px', color: '#000', backgroundColor: isSelectedMarketBettingClosed ? '#e9ecef' : '#fff' }}
+                                    />
+                                </div>
+                                <div style={{ margin: '10px 0' }}>
+                                    <label style={{ marginRight: '10px' }}>Position:</label>
+                                    <button 
+                                        onClick={() => setBetPositionIsLong(true)} 
+                                        disabled={isLoading || isSelectedMarketBettingClosed}
+                                        style={{ 
+                                            padding: '8px 12px', 
+                                            marginRight: '10px', 
+                                            background: betPositionIsLong ? '#28a745' : '#f0f0f0', 
+                                            color: betPositionIsLong ? '#fff' : '#000',
+                                            opacity: isSelectedMarketBettingClosed ? 0.6 : 1,
+                                            cursor: isSelectedMarketBettingClosed ? 'not-allowed' : 'pointer',
+                                        }}
+                                    >
+                                        Long (Streak Continues)
+                                    </button>
+                                    <button 
+                                        onClick={() => setBetPositionIsLong(false)} 
+                                        disabled={isLoading || isSelectedMarketBettingClosed}
+                                        style={{ 
+                                            padding: '8px 12px', 
+                                            background: !betPositionIsLong ? '#dc3545' : '#f0f0f0', 
+                                            color: !betPositionIsLong ? '#fff' : '#000',
+                                            opacity: isSelectedMarketBettingClosed ? 0.6 : 1,
+                                            cursor: isSelectedMarketBettingClosed ? 'not-allowed' : 'pointer',
+                                        }}
+                                    >
+                                        Short (Streak Breaks)
+                                    </button>
+                                </div>
                                 <button 
-                                    onClick={() => setBetPositionIsLong(true)} 
-                                    disabled={isLoading}
-                                    style={{ padding: '8px 12px', marginRight: '10px', background: betPositionIsLong ? '#28a745' : '#f0f0f0', color: betPositionIsLong ? '#fff' : '#000'}}
+                                    onClick={handlePlaceBet} 
+                                    disabled={isLoading || !publicKey || isSelectedMarketBettingClosed} 
+                                    style={{
+                                        padding: '10px 15px', 
+                                        marginTop: '10px', 
+                                        background: isSelectedMarketBettingClosed ? '#6c757d' : '#007bff', 
+                                        color: '#fff', 
+                                        border: 'none', 
+                                        borderRadius: '5px', 
+                                        cursor: isSelectedMarketBettingClosed ? 'not-allowed' : 'pointer' 
+                                    }}
                                 >
-                                    Long (Streak Continues)
-                                </button>
-                                <button 
-                                    onClick={() => setBetPositionIsLong(false)} 
-                                    disabled={isLoading}
-                                    style={{ padding: '8px 12px', background: !betPositionIsLong ? '#dc3545' : '#f0f0f0', color: !betPositionIsLong ? '#fff' : '#000'}}
-                                >
-                                    Short (Streak Breaks)
+                                    {isLoading ? 'Placing Bet...' : (isSelectedMarketBettingClosed ? 'Betting Ended' : 'Place Bet')}
                                 </button>
                             </div>
-                            <button onClick={handlePlaceBet} disabled={isLoading || !publicKey} style={{ padding: '10px 15px', marginTop: '10px', background: '#007bff', color: '#fff', border: 'none', borderRadius: '5px', cursor: 'pointer' }}>
-                                {isLoading ? 'Placing Bet...' : 'Place Bet'}
-                            </button>
-                        </div>
-                    )}
+                        );
+                    })()}
 
                 </div>
             ) : (
