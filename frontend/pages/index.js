@@ -162,12 +162,44 @@ export default function LandingPage() {
               </div>
               
               {animationComplete && (
-                <motion.div 
-                  className="h-1 bg-[#778DA9] mt-4 rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: "100%" }}
-                  transition={{ duration: 0.5, ease: "easeOut" }}
-                ></motion.div>
+                <>
+                  <motion.div 
+                    className="h-1 bg-[#778DA9] mt-4 rounded-full"
+                    initial={{ width: 0 }}
+                    animate={{ width: "100%" }}
+                    transition={{ duration: 0.5, ease: "easeOut" }}
+                  ></motion.div>
+                  
+                  {/* Solana branding */}
+                  <motion.div
+                    className="mt-6 flex flex-col items-center justify-center"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6, delay: 0.3 }}
+                  >
+                    <div className="text-[#14F195] text-xl md:text-2xl font-medium flex items-center gap-2">
+                      <svg width="20" height="20" viewBox="0 0 397 311" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M64.8583 237.414L149.861 310.823C152.998 313.574 157.191 313.574 160.328 310.823L396.249 106.395C401.151 102.077 401.151 94.2139 396.249 89.8954L347.258 46.5828C344.121 43.8314 339.928 43.8314 336.791 46.5828L64.8583 276.152C59.956 280.47 59.956 288.333 64.8583 292.651V237.414Z" fill="#14F195"/>
+                        <path d="M64.8583 152.707L149.861 226.117C152.998 228.868 157.191 228.868 160.328 226.117L396.249 21.6888C401.151 17.3704 401.151 9.5071 396.249 5.1886L347.258 -38.1239C344.121 -40.8753 339.928 -40.8753 336.791 -38.1239L64.8583 191.446C59.956 195.764 59.956 203.627 64.8583 207.945V152.707Z" fill="#14F195"/>
+                        <path d="M149.861 141.41L64.8583 67.9999C59.956 63.6815 59.956 55.8182 64.8583 51.4998L113.85 8.18712C116.986 5.43573 121.18 5.43573 124.317 8.18712L233.368 104.229C236.505 106.98 236.505 111.299 233.368 114.05L160.328 177.512C157.191 180.263 152.998 180.263 149.861 177.512V141.41Z" fill="#14F195"/>
+                      </svg>
+                      Powered by Solana
+                    </div>
+                    
+                    <motion.div
+                      className="text-[#778DA9] text-sm mt-2 flex gap-3"
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 0.8 }}
+                      transition={{ duration: 0.6, delay: 0.6 }}
+                    >
+                      <span>Web3</span>
+                      <span>•</span>
+                      <span>Crypto</span>
+                      <span>•</span>
+                      <span>Blockchain</span>
+                    </motion.div>
+                  </motion.div>
+                </>
               )}
             </motion.div>
           </motion.div>
@@ -300,14 +332,14 @@ export default function LandingPage() {
                     <CardBody className="!w-full !h-[400px]">
                       <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer"
                         style={{
-                          background: `linear-gradient(145deg, #0D1B2A 0%, #1B263B 50%, #415A77 100%)`,
+                          background: `linear-gradient(145deg, #1A374D 0%, #406882 50%, #6998AB 100%)`,
                           boxShadow: "0 10px 30px rgba(27, 38, 59, 0.25), inset 0 0 0 1px rgba(224, 225, 221, 0.05)"
                         }}>
                         
                         {/* Hover brightness effect */}
                         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-5 pointer-events-none"
                           style={{ 
-                            background: "linear-gradient(145deg, #1B263B 0%, #415A77 50%, #778DA9 100%)",
+                            background: "linear-gradient(145deg, #406882 0%, #6998AB 50%, #B1D0E0 100%)",
                             mixBlendMode: "soft-light"
                           }}>
                         </div>
@@ -371,14 +403,14 @@ export default function LandingPage() {
                     <CardBody className="!w-full !h-[400px]">
                       <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer"
                         style={{
-                          background: `linear-gradient(145deg, #0D1B2A 0%, #1B263B 50%, #415A77 100%)`,
+                          background: `linear-gradient(145deg, #3D2C8D 0%, #916BBF 50%, #C996CC 100%)`,
                           boxShadow: "0 10px 30px rgba(27, 38, 59, 0.25), inset 0 0 0 1px rgba(224, 225, 221, 0.05)"
                         }}>
                         
                         {/* Hover brightness effect */}
                         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-5 pointer-events-none"
                           style={{ 
-                            background: "linear-gradient(145deg, #1B263B 0%, #415A77 50%, #778DA9 100%)",
+                            background: "linear-gradient(145deg, #4B3A9F 0%, #916BBF 50%, #D1A7D1 100%)",
                             mixBlendMode: "soft-light"
                           }}>
                         </div>
@@ -449,14 +481,14 @@ export default function LandingPage() {
                     <CardBody className="!w-full !h-[400px]">
                       <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer"
                         style={{
-                          background: `linear-gradient(145deg, #0D1B2A 0%, #1B263B 50%, #415A77 100%)`,
+                          background: `linear-gradient(145deg, #3F4E4F 0%, #A27B5C 50%, #DCD7C9 100%)`,
                           boxShadow: "0 10px 30px rgba(27, 38, 59, 0.25), inset 0 0 0 1px rgba(224, 225, 221, 0.05)"
                         }}>
                         
                         {/* Hover brightness effect */}
                         <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-5 pointer-events-none"
                           style={{ 
-                            background: "linear-gradient(145deg, #1B263B 0%, #415A77 50%, #778DA9 100%)",
+                            background: "linear-gradient(145deg, #576F72 0%, #A27B5C 50%, #E4DCCF 100%)",
                             mixBlendMode: "soft-light"
                           }}>
                         </div>
