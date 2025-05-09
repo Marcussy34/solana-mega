@@ -174,7 +174,7 @@ const Home = () => {
       iconColor: "text-purple-400",
       accentColor: "bg-purple-500",
       riskLevel: "high",
-      showRiskLevel: true,
+      showRiskLevel: false, // Changed to false to hide tag initially
       showProgress: true,
       showLockInLabel: true, // Add this to enable lock-in label when reset
       icon: (
@@ -334,7 +334,12 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-gray-950 text-white px-4 py-12">
       <div className="max-w-6xl mx-auto">
-        <WelcomeHeader username="Alex" />
+        <WelcomeHeader 
+          username="User_WalletAddress" 
+          solanaAmount={lockedAmount}
+          smartContractAmount={smartContractAmount}
+          totalFunds={totalLockedFunds}
+        />
         
         {/* Total Locked Funds Counter */}
         <motion.div 
@@ -349,18 +354,33 @@ const Home = () => {
           }}
         >
           <div className="flex flex-col gap-2">
-            <div className="flex justify-between items-center">
+            <div className="flex justify-between items-center mb-2"> {/* Added mb-2 for spacing */}
               <h3 className="text-lg text-gray-300 font-medium">Total Locked Funds</h3>
               <div className="px-3 py-1 bg-emerald-500/20 rounded-full text-emerald-400 text-sm font-medium">
-                Committed to learning on LockedIn
+                Committed to SkillStreak
               </div>
             </div>
             
-            <div className="flex items-baseline">
-              <span className="text-4xl md:text-5xl font-bold text-white">
-                ${totalLockedFunds.toLocaleString()}
-              </span>
-              <span className="ml-2 text-emerald-400">USDC</span>
+            <div className="flex items-center justify-between gap-4"> {/* Changed to justify-between and added gap */}
+              {/* Left side: Amount */}
+              <div className="flex items-baseline">
+                <span className="text-4xl md:text-5xl font-bold text-white">
+                  ${totalLockedFunds.toLocaleString()}
+                </span>
+                <span className="ml-2 text-emerald-400">USDC</span>
+              </div>
+
+              {/* Right side: Donut Chart and Legend - REMOVED */}
+              {/* {totalLockedFunds > 0 && ( 
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-20 h-20 relative"> 
+                    
+                  </div>
+                  <div className="flex flex-col text-xs text-gray-400"> 
+                    
+                  </div>
+                </div>
+              )} */}
             </div>
             
             {/* Add Withdraw Early button */}
