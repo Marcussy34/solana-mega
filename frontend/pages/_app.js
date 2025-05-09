@@ -4,7 +4,8 @@ import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
 import {
     // UnsafeBurnerWalletAdapter,
     // Add other wallet adapters you want to support
-    PhantomWalletAdapter // Keep the import just in case, but comment out usage
+    PhantomWalletAdapter,
+    SolflareWalletAdapter // Example: Add Solflare if you want to support it
 } from '@solana/wallet-adapter-wallets';
 import { WalletModalProvider } from '@solana/wallet-adapter-react-ui';
 import { clusterApiUrl } from '@solana/web3.js';
@@ -30,9 +31,9 @@ export default function App({ Component, pageProps }) {
              * Do not use it in production applications.
              */
             // new UnsafeBurnerWalletAdapter(), // Example: useful for testing
-            // Add other adapters like Phantom, Solflare, etc. here
-            // new PhantomWalletAdapter(), // Remove this line
-            // new SolflareWalletAdapter({ network }),
+            new PhantomWalletAdapter(), // Add Phantom adapter instance
+            new SolflareWalletAdapter({ network }), // Add Solflare, pass network if adapter requires
+            // Add more adapters here if needed
         ],
         // eslint-disable-next-line react-hooks/exhaustive-deps
         [network]

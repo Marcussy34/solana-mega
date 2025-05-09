@@ -32,6 +32,9 @@ const USDC_MINT = new PublicKey('4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU');
 const TREASURY_WALLET = new PublicKey('6R651eq74BXg8zeQEaGX8Fm25z1N8YDqWodv3S9kUFnn'); // Treasury Wallet for early withdrawal penalty
 const USER_SEED = Buffer.from("user");
 const VAULT_SEED = Buffer.from("vault");
+// ADDED: Seeds for market creation, must match Rust program
+const MARKET_SEED = Buffer.from("market");
+const MARKET_ESCROW_VAULT_SEED = Buffer.from("market_escrow_vault");
 
 export default function TestPage() {
     const { connection } = useConnection();
@@ -400,24 +403,58 @@ export default function TestPage() {
 
         setIsLoading(true);
         setTxSig('');
-        log(`Attempting to start course with lock-in of ${lockInDaysNum} days...`);
+        log(`Attempting to start course with lock-in of ${lockInDaysNum} days... (will also create market)`);
 
         try {
             // --- 1. Prepare Instruction Arguments ---
             const lockInDaysBN = new BN(lockInDaysNum);
             log(`Start Course Lock-in Days (BN): ${lockInDaysBN.toString()}`);
 
-            // --- 2. Build the start_course instruction transaction ---
-            log("Building start_course transaction...");
+            // --- 2. Derive PDAs for Market Creation ---
+            log("Deriving PDAs for automatic market creation...");
+            // Market State PDA
+            const [marketStatePDA, marketStateBump] = PublicKey.findProgramAddressSync(
+                [MARKET_SEED, publicKey.toBuffer(), userStatePDA.toBuffer()],
+                program.programId
+            );
+            log(`Market State PDA: ${marketStatePDA.toBase58()}`);
+
+            // Market Escrow Vault PDA (depends on marketStatePDA)
+            const [marketEscrowVaultPDA, marketEscrowVaultBump] = PublicKey.findProgramAddressSync(
+                [MARKET_ESCROW_VAULT_SEED, marketStatePDA.toBuffer()],
+                program.programId
+            );
+            log(`Market Escrow Vault PDA: ${marketEscrowVaultPDA.toBase58()}`);
+
+            // Market Escrow Token Account ATA (authority is marketEscrowVaultPDA)
+            const marketEscrowTokenAccount = getAssociatedTokenAddressSync(
+                USDC_MINT,
+                marketEscrowVaultPDA, // Authority
+                true // allowOwnerOffCurve
+            );
+            log(`Market Escrow Token Account: ${marketEscrowTokenAccount.toBase58()}`);
+
+
+            // --- 3. Build the start_course instruction transaction ---
+            log("Building start_course transaction with market creation accounts...");
             const startCourseTx = await program.methods
                 .startCourse(lockInDaysBN)
                 .accounts({
                     user: publicKey,
-                    userState: userStatePDA, // Requires userState PDA
+                    userState: userStatePDA,
+                    // Accounts for automatic market creation
+                    marketState: marketStatePDA,
+                    marketEscrowVault: marketEscrowVaultPDA,
+                    marketEscrowTokenAccount: marketEscrowTokenAccount,
+                    usdcMint: USDC_MINT,
+                    systemProgram: SystemProgram.programId,
+                    tokenProgram: TOKEN_PROGRAM_ID,
+                    associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                    rent: web3.SYSVAR_RENT_PUBKEY,
                 })
                 .transaction();
 
-            // --- 3. Set Fee Payer and Simulate ---
+            // --- 4. Set Fee Payer and Simulate ---
             if (!startCourseTx.feePayer) {
                 startCourseTx.feePayer = publicKey;
             }
@@ -444,13 +481,13 @@ export default function TestPage() {
                  return; // Stop if simulation fails
             }
 
-            // --- 4. Send the transaction ---
+            // --- 5. Send the transaction ---
             log('Sending start_course transaction...');
             const startCourseSig = await sendTransaction(startCourseTx, connection);
             log('Start Course Transaction sent:', startCourseSig);
             setTxSig(startCourseSig);
 
-            // --- 5. Confirm Transaction ---
+            // --- 6. Confirm Transaction ---
             log('Confirming start_course transaction...');
             const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
             const confirmation = await connection.confirmTransaction({
