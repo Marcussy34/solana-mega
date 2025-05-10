@@ -263,6 +263,187 @@ const Home = () => {
     }
   };
 
+  // Add withdraw function
+  const handleWithdraw = async () => {
+    if (!program || !publicKey || !connection || !userStatePDA) {
+      console.error('Error: Prerequisites missing for withdrawal (program, wallet, connection, user PDA).');
+      return;
+    }
+
+    setIsLoading(true);
+    setTransactionStatus(null);
+    console.log('Attempting to withdraw funds...');
+
+    try {
+      // --- 1. Fetch User State and Current Time ---
+      console.log('Fetching user state...');
+      const userState = await program.account.userState.fetch(userStatePDA);
+      console.log('User State Fetched:', {
+        depositAmount: userState.depositAmount.toString(),
+        lockInEndTimestamp: userState.lockInEndTimestamp.toString(),
+        accruedYield: userState.accruedYield.toString(),
+      });
+
+      console.log('Fetching current blockchain time...');
+      const currentSlot = await connection.getSlot();
+      const currentTimestamp = await connection.getBlockTime(currentSlot);
+      console.log(`Current Timestamp: ${currentTimestamp}`);
+
+      const isLocked = currentTimestamp < userState.lockInEndTimestamp.toNumber();
+      console.log(`Is withdrawal period still locked? ${isLocked}`);
+
+      // --- 2. Derive Accounts ---
+      console.log('Deriving necessary accounts for withdrawal...');
+      const [vaultPDA] = PublicKey.findProgramAddressSync(
+        [VAULT_SEED],
+        program.programId
+      );
+      console.log(`Vault Authority PDA: ${vaultPDA.toBase58()}`);
+
+      const userUsdcAta = getAssociatedTokenAddressSync(USDC_MINT, publicKey);
+      console.log(`User USDC ATA: ${userUsdcAta.toBase58()}`);
+
+      const vaultUsdcAta = getAssociatedTokenAddressSync(USDC_MINT, vaultPDA, true);
+      console.log(`Vault USDC ATA: ${vaultUsdcAta.toBase58()}`);
+
+      let withdrawalInstruction;
+      let instructionName = isLocked ? 'earlyWithdraw' : 'withdraw';
+
+      // --- 3. Build Correct Instruction (Withdraw or Early Withdraw) ---
+      console.log(`Building ${instructionName} transaction...`);
+
+      if (isLocked) {
+        // Early Withdraw
+        const treasuryTokenAccount = getAssociatedTokenAddressSync(USDC_MINT, TREASURY_WALLET);
+        console.log(`Treasury Token ATA: ${treasuryTokenAccount.toBase58()}`);
+        console.log(`Using Treasury Wallet Pubkey: ${TREASURY_WALLET.toBase58()}`);
+
+        withdrawalInstruction = program.methods
+          .earlyWithdraw()
+          .accounts({
+            user: publicKey,
+            userState: userStatePDA,
+            userTokenAccount: userUsdcAta,
+            vault: vaultPDA,
+            vaultTokenAccount: vaultUsdcAta,
+            treasuryTokenAccount: treasuryTokenAccount,
+            treasuryWalletAccount: TREASURY_WALLET,
+            usdcMint: USDC_MINT,
+            tokenProgram: TOKEN_PROGRAM_ID,
+            systemProgram: SystemProgram.programId,
+            associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+            rent: web3.SYSVAR_RENT_PUBKEY,
+          });
+
+        // Log the account metas for debugging
+        try {
+          const instruction = await withdrawalInstruction.instruction();
+          console.log("Raw instruction accounts prepared by Anchor:");
+          instruction.keys.forEach((key, index) => {
+            console.log(`  [${index}] pubkey: ${key.pubkey.toBase58()}, isSigner: ${key.isSigner}, isWritable: ${key.isWritable}`);
+          });
+
+          const expectedTreasuryWalletIndex = 6;
+          if (instruction.keys.length > expectedTreasuryWalletIndex) {
+            const keyAtIndex = instruction.keys[expectedTreasuryWalletIndex];
+            console.log(`Account at expected index ${expectedTreasuryWalletIndex} (treasury_wallet_account): ${keyAtIndex.pubkey.toBase58()}`);
+            if (keyAtIndex.pubkey.toBase58() !== TREASURY_WALLET.toBase58()) {
+              console.log("!!! Mismatch detected between expected treasury wallet and key at index !!!");
+            }
+          } else {
+            console.log("Error: Could not find expected index for treasury_wallet_account in instruction keys.");
+          }
+        } catch (err) {
+          console.log("Error inspecting withdrawalInstruction accounts:", err);
+        }
+      } else {
+        // Normal Withdraw
+        withdrawalInstruction = program.methods
+          .withdraw()
+          .accounts({
+            user: publicKey,
+            userState: userStatePDA,
+            userTokenAccount: userUsdcAta,
+            vault: vaultPDA,
+            vaultTokenAccount: vaultUsdcAta,
+            usdcMint: USDC_MINT,
+            tokenProgram: TOKEN_PROGRAM_ID,
+          });
+      }
+
+      const withdrawalTransaction = await withdrawalInstruction.transaction();
+
+      // --- 4. Set Fee Payer and Simulate ---
+      withdrawalTransaction.feePayer = publicKey;
+      console.log(`Simulating ${instructionName} transaction...`);
+      try {
+        const simulationResult = await connection.simulateTransaction(withdrawalTransaction);
+        if (simulationResult.value.err) {
+          console.error(`Simulation Error (${instructionName}):`, simulationResult.value.err);
+          console.log(`Simulation Logs (${instructionName}):`, simulationResult.value.logs);
+          throw new Error(`Transaction simulation failed: ${simulationResult.value.err}`);
+        }
+        console.log(`Transaction simulation successful (${instructionName}).`);
+      } catch (simError) {
+        console.error(`Error during simulation (${instructionName}):`, simError);
+        if (simError.simulationLogs) {
+          console.log(`Simulation Logs (${instructionName}) (from catch):`, simError.simulationLogs);
+        }
+        setTransactionStatus({
+          type: 'error',
+          message: 'Transaction simulation failed'
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      // --- 5. Send Transaction ---
+      console.log(`Sending ${instructionName} transaction...`);
+      const withdrawalSignature = await sendTransaction(withdrawalTransaction, connection);
+      console.log(`${instructionName.charAt(0).toUpperCase() + instructionName.slice(1)} Transaction sent:`, withdrawalSignature);
+
+      // --- 6. Confirm Transaction ---
+      console.log(`Confirming ${instructionName} transaction...`);
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+      const confirmation = await connection.confirmTransaction({
+        signature: withdrawalSignature,
+        blockhash,
+        lastValidBlockHeight
+      }, 'confirmed');
+
+      if (confirmation.value.err) {
+        console.error(`${instructionName} transaction confirmation failed:`, confirmation.value.err);
+        try {
+          const txDetails = await connection.getTransaction(withdrawalSignature, {maxSupportedTransactionVersion: 0});
+          if (txDetails?.meta?.logMessages) {
+            console.log(`Failed ${instructionName} Transaction Logs:`, txDetails.meta.logMessages.join('\n'));
+          }
+        } catch (logError) {
+          console.error(`Could not fetch logs for failed ${instructionName} transaction:`, logError);
+        }
+        throw new Error(`${instructionName} transaction failed: ${confirmation.value.err}`);
+      }
+
+      console.log(`${instructionName.charAt(0).toUpperCase() + instructionName.slice(1)} transaction confirmed successfully.`);
+      setTransactionStatus({
+        type: 'success',
+        message: `Successfully withdrawn funds`
+      });
+      
+      // Refresh user state
+      await fetchAndUpdateUserState();
+      setShowWithdrawModal(false);
+    } catch (error) {
+      console.error('Error during withdrawal:', error);
+      setTransactionStatus({
+        type: 'error',
+        message: `Failed to withdraw: ${error.message}`
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   // Fetch and update user state function (defined before useEffect)
   const fetchAndUpdateUserState = async (pdaOverride = null) => {
     const pdaToUse = pdaOverride || userStatePDA;
@@ -462,26 +643,56 @@ const Home = () => {
 
         {/* User State Overview */}
         {userStateDetails && (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 gap-6 mb-8">
             <div className="bg-gray-900 rounded-xl p-6">
-              <h3 className="text-gray-400 text-sm mb-2">Current Balance</h3>
-              <p className="text-2xl font-bold">{(userStateDetails.depositAmount.toNumber() / 1_000_000).toFixed(2)} USDC</p>
+                    <div className="space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Deposit Amount:</span>
+                  <span className="font-mono">{(userStateDetails.depositAmount.toNumber() / 1_000_000).toFixed(6)} USDC</span>
                           </div>
-            <div className="bg-gray-900 rounded-xl p-6">
-              <h3 className="text-gray-400 text-sm mb-2">Accrued Yield</h3>
-              <p className="text-2xl font-bold text-green-400">+{(userStateDetails.accruedYield.toNumber() / 1_000_000).toFixed(2)} USDC</p>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Initial Deposit:</span>
+                  <span className="font-mono">{(userStateDetails.initialDepositAmount.toNumber() / 1_000_000).toFixed(6)} USDC</span>
                         </div>
-            <div className="bg-gray-900 rounded-xl p-6">
-              <h3 className="text-gray-400 text-sm mb-2">Current Streak</h3>
-              <p className="text-2xl font-bold text-blue-400">{userStateDetails.currentStreak.toString()} Days</p>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Current Streak:</span>
+                  <span className="font-mono">{userStateDetails.currentStreak.toString()}</span>
                     </div>
-            <div className="bg-gray-900 rounded-xl p-6">
-              <h3 className="text-gray-400 text-sm mb-2">Lock Status</h3>
-              <p className="text-2xl font-bold text-purple-400">
-                {userStateDetails.lockInEndTimestamp.toNumber() > Date.now() / 1000 ? 'Locked' : 'Unlocked'}
-                        </p>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Miss Count:</span>
+                  <span className="font-mono">{userStateDetails.missCount.toString()}</span>
+                    </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Deposit Timestamp:</span>
+                  <span className="font-mono">
+                    {userStateDetails.depositTimestamp.toNumber() ? 
+                      new Date(userStateDetails.depositTimestamp.toNumber() * 1000).toLocaleString() : 
+                      'N/A'}
+                  </span>
+                  </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Last Task Timestamp:</span>
+                  <span className="font-mono">
+                    {userStateDetails.lastTaskTimestamp.toNumber() ? 
+                      new Date(userStateDetails.lastTaskTimestamp.toNumber() * 1000).toLocaleString() : 
+                      'N/A'}
+                  </span>
+                    </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Lock-in Ends:</span>
+                  <span className="font-mono">
+                    {userStateDetails.lockInEndTimestamp.toNumber() ? 
+                      new Date(userStateDetails.lockInEndTimestamp.toNumber() * 1000).toLocaleString() : 
+                      'Not Started'}
+                  </span>
+                    </div>
+                      <div className="flex justify-between items-center">
+                  <span className="text-gray-400">Accrued Yield:</span>
+                  <span className="font-mono text-green-400">{(userStateDetails.accruedYield.toNumber() / 1_000_000).toFixed(6)} USDC</span>
                       </div>
-                      </div>
+                        </div>
+                          </div>
+                          </div>
         )}
 
         {/* Action Buttons */}
@@ -544,7 +755,29 @@ const Home = () => {
                     </div>
                   )}
 
-        {/* Rest of the existing code (modals, etc.) */}
+        {/* Withdraw Modal */}
+        {showWithdrawModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
+            <div className="bg-gray-900 rounded-xl p-6 max-w-md w-full">
+              <h3 className="text-xl font-bold mb-4">Withdraw Funds</h3>
+              <div className="flex space-x-4">
+                <button 
+                  onClick={handleWithdraw}
+                  className="flex-1 px-4 py-2 bg-purple-500 hover:bg-purple-600 rounded-lg font-medium"
+                  disabled={isLoading || !userStateDetails || userStateDetails.depositAmount.toNumber() === 0}
+                >
+                  {isLoading ? 'Processing...' : 'Confirm Withdrawal'}
+                </button>
+                <button 
+                  onClick={() => setShowWithdrawModal(false)}
+                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
                               </div>
     </div>
   );
