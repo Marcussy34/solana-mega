@@ -1182,6 +1182,16 @@ const Home = () => {
                       <span className="font-medium text-green-400">+{(userStateDetails.accruedYield.toNumber() / 1_000_000).toFixed(4)} USDC</span>
                     </div>
                   </div>
+
+                  {/* Total amount card */}
+                  <div className="p-4 rounded-xl bg-gray-700/30 border border-gray-600/50">
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-medium text-white">Total to Withdraw:</span>
+                      <span className="text-xl font-semibold text-white">
+                        {((userStateDetails.depositAmount.toNumber() + userStateDetails.accruedYield.toNumber()) / 1_000_000).toFixed(4)} USDC
+                      </span>
+                    </div>
+                  </div>
                   
                   {userStateDetails.lockInEndTimestamp.toNumber() > Math.floor(Date.now() / 1000) && (
                     <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
