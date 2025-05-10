@@ -1,5 +1,5 @@
 "use client";
-import React from "react";
+import React, { useState } from "react";
 import { 
   Navbar, 
   NavBody, 
@@ -8,8 +8,24 @@ import {
 } from "@/components/ui/resizable-navbar";
 import { CardContainer, CardBody, CardItem } from "@/components/ui/3d-card";
 import Link from "next/link";
+import { useWalletModal } from '@solana/wallet-adapter-react-ui';
+import { useWallet } from '@solana/wallet-adapter-react';
+import { useRouter } from 'next/router';
+import { useEffect } from 'react';
 
 export default function WalletsPage() {
+  const { publicKey } = useWallet();
+  const router = useRouter();
+  const { setVisible } = useWalletModal();
+  const [isHovering, setIsHovering] = useState(false);
+
+  // Redirect to home if wallet is connected
+  useEffect(() => {
+    if (publicKey) {
+      router.push('/home');
+    }
+  }, [publicKey, router]);
+
   // Array of wallet options
   const wallets = [
     {
@@ -57,62 +73,66 @@ export default function WalletsPage() {
               <div key={wallet.id} className="w-full max-w-md">
                 <CardContainer className="w-full" containerClassName="!py-4 !w-full">
                   <CardBody className="!w-full !h-[380px]">
-                    <Link href="/home" className="block w-full h-full focus:outline-none">
-                      <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer"
-                        style={{
+                    <div 
+                      onClick={() => setVisible(true)}
+                      onMouseEnter={() => setIsHovering(true)}
+                      onMouseLeave={() => setIsHovering(false)}
+                      className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer transform hover:scale-[1.02]"
+                      style={{
+                        background: wallet.gradient,
+                        boxShadow: isHovering 
+                          ? "0 20px 40px rgba(21, 62, 107, 0.3), inset 0 0 0 2px rgba(255, 255, 255, 0.1)"
+                          : "0 10px 30px rgba(21, 62, 107, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.05)"
+                      }}>
+                      
+                      {/* Hover brightness effect */}
+                      <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-5 pointer-events-none"
+                        style={{ 
                           background: wallet.gradient,
-                          boxShadow: "0 10px 30px rgba(21, 62, 107, 0.15), inset 0 0 0 1px rgba(255, 255, 255, 0.05)"
+                          mixBlendMode: "soft-light"
                         }}>
-                        
-                        {/* Hover brightness effect */}
-                        <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-5 pointer-events-none"
-                          style={{ 
-                            background: wallet.gradient,
-                            mixBlendMode: "soft-light"
-                          }}>
-                        </div>
-                        
-                        {/* Metallic overlay with light reflections */}
-                        <div className="absolute inset-0 opacity-40 z-10 pointer-events-none"
-                          style={{ 
-                            background: "linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.05) 20%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.05) 80%, transparent 100%)"
-                          }}>
-                        </div>
-                        
-                        <div className="absolute inset-0 z-20 p-6">
-                          {/* Layout container */}
-                          <div className="relative w-full h-full flex flex-col">
-                            {/* Top section with icon */}
-                            <div className="flex justify-center mb-6">
-                              <CardItem
-                                translateZ={40}
-                                className="w-28 h-28 rounded-full flex items-center justify-center"
-                                style={{ 
-                                  background: "linear-gradient(135deg, rgba(200,200,200,0.3) 0%, rgba(150,150,150,0.1) 100%)",
-                                  boxShadow: "0 0 15px rgba(255,255,255,0.1), inset 0 0 20px rgba(255,255,255,0.03)"
-                                }}>
-                                {wallet.icon}
-                              </CardItem>
-                            </div>
+                      </div>
+                      
+                      {/* Metallic overlay with light reflections */}
+                      <div className="absolute inset-0 opacity-40 z-10 pointer-events-none"
+                        style={{ 
+                          background: "linear-gradient(100deg, transparent 0%, rgba(255, 255, 255, 0.05) 20%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.05) 80%, transparent 100%)"
+                        }}>
+                      </div>
+                      
+                      <div className="absolute inset-0 z-20 p-6">
+                        {/* Layout container */}
+                        <div className="relative w-full h-full flex flex-col">
+                          {/* Top section with icon */}
+                          <div className="flex justify-center mb-6">
+                            <CardItem
+                              translateZ={40}
+                              className="w-28 h-28 rounded-full flex items-center justify-center"
+                              style={{ 
+                                background: "linear-gradient(135deg, rgba(200,200,200,0.3) 0%, rgba(150,150,150,0.1) 100%)",
+                                boxShadow: "0 0 15px rgba(255,255,255,0.1), inset 0 0 20px rgba(255,255,255,0.03)"
+                              }}>
+                              {wallet.icon}
+                            </CardItem>
+                          </div>
+                          
+                          {/* Middle section with title */}
+                          <div className="flex-grow flex flex-col items-center">
+                            <CardItem
+                              translateZ={50}
+                              className="text-3xl font-bold text-center text-white/90 group-hover:text-white mb-4">
+                              {wallet.name}
+                            </CardItem>
                             
-                            {/* Middle section with title */}
-                            <div className="flex-grow flex flex-col items-center">
-                              <CardItem
-                                translateZ={50}
-                                className="text-3xl font-bold text-center text-white/90 group-hover:text-white mb-4">
-                                {wallet.name}
-                              </CardItem>
-                              
-                              <CardItem
-                                translateZ={30}
-                                className="text-center text-gray-300/80 group-hover:text-gray-300">
-                                {wallet.description}
-                              </CardItem>
-                            </div>
+                            <CardItem
+                              translateZ={30}
+                              className="text-center text-gray-300/80 group-hover:text-gray-300">
+                              {wallet.description}
+                            </CardItem>
                           </div>
                         </div>
                       </div>
-                    </Link>
+                    </div>
                   </CardBody>
                 </CardContainer>
               </div>
