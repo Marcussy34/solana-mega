@@ -145,6 +145,7 @@ const Home = () => {
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState(null);
+  const [notificationVisible, setNotificationVisible] = useState(false);
 
   // Add deposit function
   const handleDeposit = async () => {
@@ -274,14 +275,20 @@ const Home = () => {
       }
 
       console.log('Deposit transaction confirmed successfully.');
+      
+      // First close the modal
+      setShowDepositModal(false);
+      setDepositAmount('0.5'); // Reset deposit amount
+      
+      // Then update the user state
+      await fetchAndUpdateUserState();
+      
+      // Finally show the success notification
       setTransactionStatus({
         type: 'success',
         message: `Successfully deposited ${depositAmount} USDC`
       });
       
-      // Refresh user state
-      await fetchAndUpdateUserState();
-      setShowDepositModal(false);
     } catch (error) {
       console.error('Deposit error:', error);
       setTransactionStatus({
@@ -455,14 +462,19 @@ const Home = () => {
       }
 
       console.log(`${instructionName.charAt(0).toUpperCase() + instructionName.slice(1)} transaction confirmed successfully.`);
+      
+      // First close the modal
+      setShowWithdrawModal(false);
+      
+      // Then update the user state
+      await fetchAndUpdateUserState();
+      
+      // Finally show the success notification
       setTransactionStatus({
         type: 'success',
         message: `Successfully withdrawn funds`
       });
       
-      // Refresh user state
-      await fetchAndUpdateUserState();
-      setShowWithdrawModal(false);
     } catch (error) {
       console.error('Error during withdrawal:', error);
       setTransactionStatus({
@@ -604,6 +616,29 @@ const Home = () => {
     initializeUserState();
   }, [program, publicKey, connection]);
 
+  // Update the useEffect for transaction status
+  useEffect(() => {
+    if (transactionStatus) {
+      // Show notification immediately
+      setNotificationVisible(true);
+      
+      // Set display time to 5 seconds
+      const displayTimer = setTimeout(() => {
+        // Start fade out
+        setNotificationVisible(false);
+        
+        // Remove from DOM after fade out completes
+        const cleanupTimer = setTimeout(() => {
+          setTransactionStatus(null);
+        }, 500); // Keep 500ms fade out duration
+        
+        return () => clearTimeout(cleanupTimer);
+      }, 5000); // Changed from 8000ms to 5000ms
+      
+      return () => clearTimeout(displayTimer);
+    }
+  }, [transactionStatus]);
+
   // Early return for client-side rendering
   if (!mounted) return null;
 
@@ -738,21 +773,56 @@ const Home = () => {
 
         {/* Transaction Status */}
         {transactionStatus && (
-          <div className="fixed bottom-8 right-8 max-w-sm w-full animate-fade-in">
-            <Card className={`
-              ${transactionStatus.type === 'success' ? 'bg-green-500/10 border-green-500/20' :
-                transactionStatus.type === 'error' ? 'bg-red-500/10 border-red-500/20' :
-                'bg-blue-500/10 border-blue-500/20'} 
-              border shadow-lg
-            `}>
-              <CardBody className="py-3 px-4">
-                <p className={`text-sm ${
-                  transactionStatus.type === 'success' ? 'text-green-400' :
-                  transactionStatus.type === 'error' ? 'text-red-400' :
-                  'text-blue-400'
-                }`}>
-                  {transactionStatus.message}
-                </p>
+          <div 
+            className="fixed bottom-8 right-8 max-w-sm w-full z-50"
+            style={{
+              opacity: notificationVisible ? 1 : 0,
+              transform: notificationVisible ? 'translateY(0)' : 'translateY(20px)',
+              transition: 'all 0.5s ease-in-out', // Slower, smoother transition
+              pointerEvents: 'none' // Prevent notification from blocking interactions
+            }}
+          >
+            <Card 
+              className={`
+                ${transactionStatus.type === 'success' ? 'bg-green-500/10 border-green-500/20' :
+                  transactionStatus.type === 'error' ? 'bg-red-500/10 border-red-500/20' :
+                  'bg-blue-500/10 border-blue-500/20'} 
+                border shadow-lg backdrop-blur-sm
+              `}
+            >
+              <CardBody className="py-4 px-5"> {/* Slightly larger padding */}
+                <div className="flex items-center gap-3">
+                  {transactionStatus.type === 'success' ? (
+                    <div className="rounded-full p-2 bg-green-500/20"> {/* Larger icon padding */}
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  ) : transactionStatus.type === 'error' ? (
+                    <div className="rounded-full p-2 bg-red-500/20"> {/* Larger icon padding */}
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  ) : (
+                    <div className="rounded-full p-2 bg-blue-500/20"> {/* Larger icon padding */}
+                      <svg className="animate-spin h-6 w-6 text-blue-400" viewBox="0 0 24 24">
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                    </div>
+                  )}
+                  <p className={`text-sm font-medium ${
+                    transactionStatus.type === 'success' ? 'text-green-400' :
+                    transactionStatus.type === 'error' ? 'text-red-400' :
+                    'text-blue-400'
+                  }`}>
+                    {transactionStatus.message}
+                  </p>
+                </div>
               </CardBody>
             </Card>
           </div>
