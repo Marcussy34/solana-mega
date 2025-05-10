@@ -27,6 +27,36 @@ import {
 } from '@solana/spl-token';
 import idl from '../lib/idl/skillstreak_program.json';
 
+// HeroUI components
+import {
+  Card,
+  CardBody,
+  CardHeader,
+  CardFooter,
+  Button,
+  Modal,
+  ModalContent,
+  ModalHeader,
+  ModalBody,
+  ModalFooter,
+  Input,
+  Navbar,
+  NavbarBrand,
+  NavbarContent,
+  NavbarItem,
+  Badge,
+  Dropdown,
+  DropdownTrigger,
+  DropdownMenu,
+  DropdownItem,
+  Tooltip,
+  Chip,
+  Divider,
+  Tabs,
+  Tab,
+  Progress
+} from '@heroui/react';
+
 // Constants
 console.log("Imported IDL:", idl);
 
@@ -99,12 +129,12 @@ const VAULT_SEED = Buffer.from("vault");
   ];
 
 const Home = () => {
-  // Router and Wallet hooks (always first)
+  // Router and Wallet hooks
   const router = useRouter();
   const { publicKey, sendTransaction, disconnect, wallet } = useWallet();
   const { connection } = useConnection();
 
-  // All useState hooks (grouped together)
+  // State management
   const [mounted, setMounted] = useState(false);
   const [program, setProgram] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -580,205 +610,554 @@ const Home = () => {
   // Show connect wallet message if no wallet is connected
   if (!publicKey) {
     return (
-      <div className="min-h-screen bg-gray-950 text-white px-4 py-12 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-4xl font-bold mb-4">Welcome to LockedIn</h1>
-          <p className="text-gray-400 mb-8">Please connect a wallet to continue</p>
-          <Link 
-            href="/wallets"
-            className="inline-flex items-center px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white font-medium rounded-lg transition-colors"
-          >
-            Connect Wallet
-          </Link>
-                              </div>
-                  </div>
+      <div className="min-h-screen bg-gradient-to-b from-gray-900 to-black text-white flex items-center justify-center p-4">
+        <Card className="max-w-md w-full bg-gray-800/50 backdrop-blur-md border border-gray-700 shadow-xl">
+          <CardHeader className="flex flex-col items-center gap-2 pb-6">
+            <h1 className="text-4xl font-bold text-white">SkillStreak</h1>
+            <p className="text-gray-400">Learn, earn, and grow your crypto</p>
+          </CardHeader>
+          <CardBody>
+            <p className="text-center text-gray-300 mb-8">Please connect a wallet to access your dashboard</p>
+            <Button 
+              as={Link}
+              href="/wallets"
+              color="primary" 
+              className="w-full py-6"
+              size="lg"
+            >
+              Connect Wallet
+            </Button>
+          </CardBody>
+        </Card>
+      </div>
     );
   }
 
+  // Helper function to format dates nicely
+  const formatDate = (timestamp) => {
+    if (!timestamp) return 'Not Set';
+    const date = new Date(timestamp * 1000);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric'
+    });
+  };
+
+  // Helper function to get status for lock period
+  const getLockStatus = () => {
+    if (!userStateDetails || !userStateDetails.lockInEndTimestamp.toNumber()) {
+      return { label: 'Not Started', color: 'default' };
+    }
+    
+    const currentTime = Math.floor(Date.now() / 1000);
+    const lockEndTime = userStateDetails.lockInEndTimestamp.toNumber();
+    
+    if (currentTime > lockEndTime) {
+      return { label: 'Completed', color: 'success' };
+    } else {
+      return { label: 'Active', color: 'primary' };
+    }
+  };
+  
+  // Helper function to get streak status indicator
+  const getStreakStatus = () => {
+    if (!userStateDetails) return { label: 'No Data', color: 'default' };
+    
+    const missCount = userStateDetails.missCount.toNumber();
+    
+    if (missCount === 0) {
+      return { label: 'Perfect', color: 'success' };
+    } else if (missCount < 3) {
+      return { label: 'Good', color: 'warning' };
+    } else {
+      return { label: 'Penalty Mode', color: 'danger' };
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-950 text-white">
-      {/* Main Dashboard Layout */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header Section with Welcome and Disconnect */}
-        <div className="flex justify-between items-center mb-8">
-          <WelcomeHeader walletAddress={publicKey?.toBase58()} />
-                        <button 
-            onClick={disconnect}
-            className="px-4 py-2 bg-transparent hover:bg-gray-800 text-gray-400 hover:text-white rounded-lg transition-colors flex items-center space-x-2"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
-                            </svg>
-            <span>Disconnect</span>
-                        </button>
-                    </div>
-                    
+    <div className="min-h-screen bg-[#0A0B0D] text-white font-inter">
+      {/* Navbar */}
+      <Navbar 
+        className="bg-[#0A0B0D]/95 backdrop-blur-md border-b border-gray-800/50"
+        maxWidth="full"
+        position="sticky"
+      >
+        <NavbarBrand>
+          <h1 className="font-medium text-xl">SkillStreak</h1>
+        </NavbarBrand>
+        <NavbarContent justify="end">
+          <NavbarItem>
+            <Tooltip content={publicKey?.toBase58()}>
+              <Chip
+                className="bg-gray-800/50 border border-gray-700"
+                size="sm"
+                variant="flat"
+              >
+                {publicKey?.toBase58().slice(0, 4)}...{publicKey?.toBase58().slice(-4)}
+              </Chip>
+            </Tooltip>
+          </NavbarItem>
+          <NavbarItem>
+            <Button 
+              className="bg-gray-800/50 hover:bg-gray-700/50 border border-gray-700"
+              size="sm"
+              onClick={disconnect}
+              startContent={
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M3 3a1 1 0 00-1 1v12a1 1 0 102 0V4a1 1 0 00-1-1zm10.293 9.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L14.586 9H7a1 1 0 100 2h7.586l-1.293 1.293z" clipRule="evenodd" />
+                </svg>
+              }
+            >
+              Disconnect
+            </Button>
+          </NavbarItem>
+        </NavbarContent>
+      </Navbar>
+      
+      {/* Main Content */}
+      <div className="max-w-4xl mx-auto px-4 py-12">
         {/* Loading State */}
         {isUserInitialized === null && (
-          <div className="flex items-center justify-center py-12">
+          <div className="flex flex-col items-center justify-center py-20">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
-            <p className="ml-3 text-gray-400">Initializing your profile...</p>
-                            </div>
+            <p className="mt-4 text-gray-400 text-sm">Loading your profile...</p>
+          </div>
         )}
 
         {/* Error State */}
         {isUserInitialized === false && (
           <div className="flex items-center justify-center py-12">
-            <div className="bg-red-500/10 text-red-400 px-6 py-4 rounded-lg">
-              <p>Failed to initialize your profile. Please try refreshing the page.</p>
-                            </div>
-                              </div>
+            <Card className="bg-red-500/10 border border-red-500/20">
+              <CardBody>
+                <p className="text-red-400 text-sm">Failed to initialize your profile. Please try refreshing the page.</p>
+              </CardBody>
+            </Card>
+          </div>
         )}
 
         {/* Transaction Status */}
         {transactionStatus && (
-          <div className={`mb-8 p-4 rounded-lg ${
-            transactionStatus.type === 'success' ? 'bg-green-500/20 text-green-400' :
-            transactionStatus.type === 'error' ? 'bg-red-500/20 text-red-400' :
-            'bg-blue-500/20 text-blue-400'
-          }`}>
-            {transactionStatus.message}
-                              </div>
+          <div className="fixed bottom-8 right-8 max-w-sm w-full animate-fade-in">
+            <Card className={`
+              ${transactionStatus.type === 'success' ? 'bg-green-500/10 border-green-500/20' :
+                transactionStatus.type === 'error' ? 'bg-red-500/10 border-red-500/20' :
+                'bg-blue-500/10 border-blue-500/20'} 
+              border shadow-lg
+            `}>
+              <CardBody className="py-3 px-4">
+                <p className={`text-sm ${
+                  transactionStatus.type === 'success' ? 'text-green-400' :
+                  transactionStatus.type === 'error' ? 'text-red-400' :
+                  'text-blue-400'
+                }`}>
+                  {transactionStatus.message}
+                </p>
+              </CardBody>
+            </Card>
+          </div>
         )}
 
-        {/* User State Overview */}
+        {/* Dashboard Content */}
         {userStateDetails && (
-          <div className="grid grid-cols-1 gap-6 mb-8">
-            <div className="bg-gray-900 rounded-xl p-6">
-                    <div className="space-y-2">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Deposit Amount:</span>
-                  <span className="font-mono">{(userStateDetails.depositAmount.toNumber() / 1_000_000).toFixed(6)} USDC</span>
+          <div className="space-y-6">
+            {/* Main Balance Card */}
+            <Card className="bg-gradient-to-b from-gray-800/50 to-gray-900/50 border border-gray-700/50 shadow-xl overflow-hidden rounded-2xl">
+              <CardBody className="p-8">
+                <div className="space-y-8">
+                  {/* Balance Header */}
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-2xl font-medium">Your Balance</h2>
+                      <Tooltip
+                        content={
+                          <div className="max-w-xs p-2">
+                            <p className="text-sm">
+                              This is your learning account balance. When starting a streak, you can choose how much to lock from this account.
+                            </p>
                           </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Initial Deposit:</span>
-                  <span className="font-mono">{(userStateDetails.initialDepositAmount.toNumber() / 1_000_000).toFixed(6)} USDC</span>
+                        }
+                        placement="right"
+                      >
+                        <div className="cursor-help">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                          </svg>
                         </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Current Streak:</span>
-                  <span className="font-mono">{userStateDetails.currentStreak.toString()}</span>
+                      </Tooltip>
                     </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Miss Count:</span>
-                  <span className="font-mono">{userStateDetails.missCount.toString()}</span>
-                    </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Deposit Timestamp:</span>
-                  <span className="font-mono">
-                    {userStateDetails.depositTimestamp.toNumber() ? 
-                      new Date(userStateDetails.depositTimestamp.toNumber() * 1000).toLocaleString() : 
-                      'N/A'}
-                  </span>
+                    <Chip
+                      className={`${userStateDetails.depositAmount.toNumber() > 0 ? 
+                        'bg-green-500/10 border-green-500/20 text-green-400' : 
+                        'bg-gray-500/10 border-gray-500/20 text-gray-400'
+                      } border`}
+                      size="sm"
+                    >
+                      {userStateDetails.depositAmount.toNumber() > 0 ? "Active" : "Inactive"}
+                    </Chip>
                   </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Last Task Timestamp:</span>
-                  <span className="font-mono">
-                    {userStateDetails.lastTaskTimestamp.toNumber() ? 
-                      new Date(userStateDetails.lastTaskTimestamp.toNumber() * 1000).toLocaleString() : 
-                      'N/A'}
-                  </span>
-                    </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Lock-in Ends:</span>
-                  <span className="font-mono">
-                    {userStateDetails.lockInEndTimestamp.toNumber() ? 
-                      new Date(userStateDetails.lockInEndTimestamp.toNumber() * 1000).toLocaleString() : 
-                      'Not Started'}
-                  </span>
-                    </div>
-                      <div className="flex justify-between items-center">
-                  <span className="text-gray-400">Accrued Yield:</span>
-                  <span className="font-mono text-green-400">{(userStateDetails.accruedYield.toNumber() / 1_000_000).toFixed(6)} USDC</span>
-                      </div>
-                        </div>
-                          </div>
-                          </div>
-        )}
 
-        {/* Action Buttons */}
-        <div className="flex space-x-4 mb-8">
-              <button 
-            onClick={() => setShowDepositModal(true)}
-            className="px-6 py-3 bg-blue-500 hover:bg-blue-600 rounded-lg font-medium transition-colors flex items-center"
-            disabled={isLoading}
-              >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                </svg>
-            Deposit USDC
-              </button>
-              <button 
-            onClick={() => setShowWithdrawModal(true)}
-            className="px-6 py-3 bg-purple-500 hover:bg-purple-600 rounded-lg font-medium transition-colors flex items-center"
-            disabled={isLoading || !userStateDetails || userStateDetails.depositAmount.toNumber() === 0}
-              >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                </svg>
-            Withdraw
-              </button>
-                </div>
-                
-        {/* Deposit Modal */}
-        {showDepositModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-gray-900 rounded-xl p-6 max-w-md w-full">
-              <h3 className="text-xl font-bold mb-4">Deposit USDC</h3>
-              <div className="mb-4">
-                <label className="block text-gray-400 mb-2">Amount (USDC)</label>
-                <input
-                  type="number"
-                  value={depositAmount}
-                  onChange={(e) => setDepositAmount(e.target.value)}
-                  className="w-full bg-gray-800 rounded-lg px-4 py-2 text-white"
-                  placeholder="0.00"
-                  min="0"
-                  step="0.1"
-                />
-                </div>
-              <div className="flex space-x-4">
-              <button 
-                  onClick={handleDeposit}
-                  disabled={isLoading || !depositAmount || parseFloat(depositAmount) <= 0}
-                  className="flex-1 px-4 py-2 bg-blue-500 hover:bg-blue-600 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                  {isLoading ? 'Processing...' : 'Confirm Deposit'}
-              </button>
-                      <button 
-                  onClick={() => setShowDepositModal(false)}
-                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg"
-                >
-                  Cancel
-                      </button>
-                  </div>
+                  {/* Balance Amount */}
+                  <div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-medium tracking-tight">
+                        {(userStateDetails.depositAmount.toNumber() / 1_000_000).toFixed(2)}
+                      </span>
+                      <span className="text-gray-400">USDC</span>
+                    </div>
+                    <div className="mt-4 grid grid-cols-2 gap-8">
+                      <div>
+                        <p className="text-sm text-gray-400 mb-1">Initial Deposit</p>
+                        <p className="text-lg font-medium">
+                          {(userStateDetails.initialDepositAmount.toNumber() / 1_000_000).toFixed(2)}
+                          <span className="text-sm text-gray-400 ml-1">USDC</span>
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-gray-400 mb-1">Accrued Yield</p>
+                        <p className="text-lg font-medium text-green-400">
+                          +{(userStateDetails.accruedYield.toNumber() / 1_000_000).toFixed(4)}
+                          <span className="text-sm text-gray-400 ml-1">USDC</span>
+                        </p>
                       </div>
                     </div>
+                  </div>
+                </div>
+              </CardBody>
+            </Card>
+
+            {/* Status Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Lock Period Card */}
+              <Card className="bg-gray-800/30 border border-gray-700/50 rounded-2xl">
+                <CardBody className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-full bg-blue-500/10 border border-blue-500/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <h3 className="font-medium">Lock Period</h3>
+                    </div>
+                    <Chip 
+                      className={`${getLockStatus().color === 'success' ? 
+                        'bg-green-500/10 border-green-500/20 text-green-400' : 
+                        'bg-gray-500/10 border-gray-500/20 text-gray-400'
+                      } border`}
+                      size="sm"
+                    >
+                      {getLockStatus().label}
+                    </Chip>
+                  </div>
+
+                  {userStateDetails.lockInEndTimestamp.toNumber() ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-gray-400 mb-1">Started</p>
+                          <p>{formatDate(userStateDetails.depositTimestamp.toNumber())}</p>
+                        </div>
+                        <div>
+                          <p className="text-gray-400 mb-1">Ends</p>
+                          <p>{formatDate(userStateDetails.lockInEndTimestamp.toNumber())}</p>
+                        </div>
+                      </div>
+                      <Progress 
+                        value={Math.min(100, Math.max(0, 
+                          (Math.floor(Date.now() / 1000) - userStateDetails.depositTimestamp.toNumber()) / 
+                          (userStateDetails.lockInEndTimestamp.toNumber() - userStateDetails.depositTimestamp.toNumber()) * 100
+                        ))}
+                        className="h-1"
+                        color="primary"
+                      />
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400">Start a streak to view your lock period</p>
                   )}
+                </CardBody>
+              </Card>
 
-        {/* Withdraw Modal */}
-        {showWithdrawModal && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
-            <div className="bg-gray-900 rounded-xl p-6 max-w-md w-full">
-              <h3 className="text-xl font-bold mb-4">Withdraw Funds</h3>
-              <div className="flex space-x-4">
-                <button 
-                  onClick={handleWithdraw}
-                  className="flex-1 px-4 py-2 bg-purple-500 hover:bg-purple-600 rounded-lg font-medium"
-                  disabled={isLoading || !userStateDetails || userStateDetails.depositAmount.toNumber() === 0}
+              {/* Streak Card */}
+              <Card className="bg-gray-800/30 border border-gray-700/50 rounded-2xl">
+                <CardBody className="p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-full bg-green-500/10 border border-green-500/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <h3 className="font-medium">Learning Streak</h3>
+                    </div>
+                    <Chip 
+                      className={`${getStreakStatus().color === 'success' ? 
+                        'bg-green-500/10 border-green-500/20 text-green-400' : 
+                        'bg-gray-500/10 border-gray-500/20 text-gray-400'
+                      } border`}
+                      size="sm"
+                    >
+                      {getStreakStatus().label}
+                    </Chip>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-4 text-sm">
+                    <div>
+                      <p className="text-gray-400 mb-1">Current</p>
+                      <p>{userStateDetails.currentStreak.toNumber()} days</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 mb-1">Missed</p>
+                      <p>{userStateDetails.missCount.toNumber()} sessions</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-400 mb-1">Last Activity</p>
+                      <p>{userStateDetails.lastTaskTimestamp.toNumber() ? 
+                        formatDate(userStateDetails.lastTaskTimestamp.toNumber()) : 
+                        'No activity'}</p>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="fixed bottom-0 left-0 right-0 bg-[#0A0B0D]/95 backdrop-blur-md border-t border-gray-800/50 p-4">
+              <div className="max-w-4xl mx-auto flex gap-4">
+                <Button
+                  className={`flex-1 rounded-xl flex items-center justify-center gap-2 ${
+                    isLoading 
+                      ? 'bg-blue-500 cursor-not-allowed' 
+                      : 'bg-blue-500 hover:bg-blue-600'
+                  } text-white`}
+                  onClick={() => setShowDepositModal(true)}
                 >
-                  {isLoading ? 'Processing...' : 'Confirm Withdrawal'}
-                </button>
-                <button 
-                  onClick={() => setShowWithdrawModal(false)}
-                  className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg"
+                  {isLoading ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        />
+                      </svg>
+                      <span>Processing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                      </svg>
+                      <span>Deposit</span>
+                    </>
+                  )}
+                </Button>
+                <Button
+                  className="flex-1 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl"
+                  size="lg"
+                  onClick={() => setShowWithdrawModal(true)}
+                  disabled={userStateDetails.depositAmount.toNumber() === 0}
+                  startContent={
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                    </svg>
+                  }
                 >
-                  Cancel
-                </button>
+                  Withdraw
+                </Button>
               </div>
             </div>
           </div>
         )}
-                              </div>
+
+        {/* Deposit Modal */}
+        <Modal 
+          isOpen={showDepositModal} 
+          onClose={() => setShowDepositModal(false)}
+          backdrop="blur"
+          placement="center"
+          classNames={{
+            backdrop: "bg-black/60",
+            base: "bg-[#0A0B0D] border border-gray-800/50 shadow-xl text-white rounded-2xl",
+            header: "border-b border-gray-800/50",
+            body: "py-6",
+            footer: "border-t border-gray-800/50"
+          }}
+          size="sm"
+        >
+          <ModalContent>
+            <ModalHeader className="flex flex-col gap-1">
+              <h3 className="text-xl font-medium">Deposit USDC</h3>
+              <p className="text-sm text-gray-400">Add funds to your learning wallet</p>
+            </ModalHeader>
+            <ModalBody>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="block text-sm text-gray-400">Amount</label>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      value={depositAmount}
+                      onChange={(e) => setDepositAmount(e.target.value)}
+                      min="0"
+                      step="0.1"
+                      placeholder="0.00"
+                      variant="flat"
+                      className="w-full"
+                      startContent={
+                        <div className="pointer-events-none flex items-center">
+                          <span className="text-gray-400">$</span>
+                        </div>
+                      }
+                      endContent={
+                        <div className="flex items-center">
+                          <span className="text-gray-400">USDC</span>
+                        </div>
+                      }
+                      classNames={{
+                        input: [
+                          "text-lg",
+                          "font-medium",
+                          "bg-transparent",
+                          "pl-1"
+                        ],
+                        inputWrapper: [
+                          "h-12",
+                          "bg-gray-800/50",
+                          "hover:bg-gray-800",
+                          "group-data-[focused=true]:bg-gray-800",
+                          "!border-0",
+                          "shadow-none",
+                          "rounded-xl"
+                        ]
+                      }}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-800/50 rounded-xl">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                  <p className="text-xs text-gray-400">
+                    Funds can be withdrawn anytime unless locked in a streak
+                  </p>
+                </div>
+              </div>
+            </ModalBody>
+            <ModalFooter>
+              <Button 
+                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl"
+                onClick={() => setShowDepositModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className={`flex-1 rounded-xl flex items-center justify-center gap-2 ${
+                  isLoading 
+                    ? 'bg-blue-500 cursor-not-allowed' 
+                    : 'bg-blue-500 hover:bg-blue-600'
+                } text-white`}
+                onClick={handleDeposit}
+                disabled={isLoading || !depositAmount || parseFloat(depositAmount) <= 0}
+              >
+                {isLoading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  'Confirm Deposit'
+                )}
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+
+        {/* Withdraw Modal */}
+        <Modal 
+          isOpen={showWithdrawModal} 
+          onClose={() => setShowWithdrawModal(false)}
+          backdrop="blur"
+          placement="center"
+          classNames={{
+            backdrop: "bg-black/60",
+            base: "bg-[#0A0B0D] border border-gray-800/50 shadow-xl text-white rounded-2xl",
+            header: "border-b border-gray-800/50",
+            body: "py-6",
+            footer: "border-t border-gray-800/50"
+          }}
+          size="sm"
+        >
+          <ModalContent>
+            <ModalHeader className="flex flex-col gap-1">
+              <h3 className="text-xl font-medium">Withdraw Funds</h3>
+            </ModalHeader>
+            <ModalBody>
+              {userStateDetails && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-gray-800/50">
+                    <div className="flex justify-between mb-2">
+                      <span className="text-gray-400">Available Balance:</span>
+                      <span className="font-medium">{(userStateDetails.depositAmount.toNumber() / 1_000_000).toFixed(4)} USDC</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-gray-400">Accrued Yield:</span>
+                      <span className="font-medium text-green-400">+{(userStateDetails.accruedYield.toNumber() / 1_000_000).toFixed(4)} USDC</span>
+                    </div>
+                  </div>
+                  
+                  {userStateDetails.lockInEndTimestamp.toNumber() > Math.floor(Date.now() / 1000) && (
+                    <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20">
+                      <p className="text-sm text-red-400">
+                        <strong>Note:</strong> Some funds are locked in an active streak and cannot be withdrawn.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </ModalBody>
+            <ModalFooter>
+              <Button 
+                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl"
+                onClick={() => setShowWithdrawModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className={`flex-1 rounded-xl flex items-center justify-center gap-2 ${
+                  isLoading 
+                    ? 'bg-blue-500 cursor-not-allowed' 
+                    : 'bg-blue-500 hover:bg-blue-600'
+                } text-white`}
+                onClick={handleWithdraw}
+                disabled={isLoading || !userStateDetails || userStateDetails.depositAmount.toNumber() === 0}
+              >
+                {isLoading ? (
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    <span>Processing...</span>
+                  </>
+                ) : (
+                  'Confirm Withdrawal'
+                )}
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      </div>
     </div>
   );
 };
