@@ -3,5 +3,8 @@
     "paths": {
       "@/*": ["./*"]
     }
+  },
+  "typeAcquisition": {
+    "exclude": ["lodash"]
   }
 }
