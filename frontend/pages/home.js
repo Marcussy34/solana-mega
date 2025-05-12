@@ -167,7 +167,7 @@ const Home = () => {
   const [userStatePDA, setUserStatePDA] = useState(null);
   const [userStateDetails, setUserStateDetails] = useState(null);
   const [isUserInitialized, setIsUserInitialized] = useState(null);
-  const [depositAmount, setDepositAmount] = useState('0.5');
+  const [depositAmount, setDepositAmount] = useState('1');
   const [lockInDays, setLockInDays] = useState('30');
   const [showDepositModal, setShowDepositModal] = useState(false);
   const [showStartStreakModal, setShowStartStreakModal] = useState(false);
