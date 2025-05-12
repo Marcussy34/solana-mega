@@ -2112,37 +2112,46 @@ const Home = () => {
             <ModalBody>
               {userStateDetails ? (
                 <div className="space-y-4">
-                    <div className="p-4 rounded-xl bg-gray-800/50">
-                        <div className="flex justify-between mb-2">
-                            <span className="text-gray-400">Total Balance:</span>
-                            <span className="font-medium">
-                                {(userStateDetails.depositAmount.toNumber() / 1_000_000).toFixed(4)} USDC
-                            </span>
-                        </div>
-                        <div className="flex justify-between">
-                            <span className="text-gray-400">Available to Withdraw:</span>
-                            <span className="font-medium">
-                                {(Math.max(0, userStateDetails.depositAmount.toNumber() - userStateDetails.initialDepositAmount.toNumber()) / 1_000_000).toFixed(4)} USDC
-                            </span>
-                        </div>
+                  <div className="p-4 rounded-xl bg-gray-800/50">
+                    <div className="flex justify-between mb-2">
+                      <span className="text-gray-400">Total Balance:</span>
+                      <span className="font-medium">
+                        {(userStateDetails.depositAmount.toNumber() / 1_000_000).toFixed(4)} USDC
+                      </span>
                     </div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-gray-400">Available to Withdraw:</span>
+                      <span className="font-medium">
+                        {(Math.max(0, userStateDetails.depositAmount.toNumber() - userStateDetails.initialDepositAmount.toNumber()) / 1_000_000).toFixed(4)} USDC
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center border-t border-gray-700/50 pt-2 mt-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-gray-400">Accrued Yield:</span>
+                        <span className="text-xs text-gray-500">(cannot be withdrawn)</span>
+                      </div>
+                      <span className="font-medium text-green-400">
+                        {(userStateDetails.accruedYield.toNumber() / 1_000_000).toFixed(4)} USDC
+                      </span>
+                    </div>
+                  </div>
 
-                    <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                        <div className="flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                            </svg>
-                            <p className="text-xs text-blue-400">
-                                This will withdraw your available unlocked balance to your wallet. Locked funds will remain in the program.
-                            </p>
-                        </div>
+                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                    <div className="flex items-center gap-2">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                      </svg>
+                      <p className="text-xs text-blue-400">
+                        This will withdraw your available unlocked balance to your wallet. Locked funds and accrued yield will remain in the program.
+                      </p>
                     </div>
+                  </div>
                 </div>
-            ) : (
+              ) : (
                 <div className="p-4 text-center text-gray-400">
-                    Loading balance information...
+                  Loading balance information...
                 </div>
-            )}
+              )}
             </ModalBody>
             <ModalFooter>
               <Button 
@@ -2153,26 +2162,26 @@ const Home = () => {
               </Button>
               <Button 
                 className={`flex-1 rounded-xl flex items-center justify-center gap-2 ${
-                    isLoading 
-                        ? 'bg-blue-500 cursor-not-allowed' 
-                        : 'bg-blue-500 hover:bg-blue-600'
+                  isLoading 
+                    ? 'bg-blue-500 cursor-not-allowed' 
+                    : 'bg-blue-500 hover:bg-blue-600'
                 } text-white`}
                 onClick={handleWithdrawUnlocked}
                 disabled={isLoading || !userStateDetails || (userStateDetails?.depositAmount.toNumber() - userStateDetails?.initialDepositAmount.toNumber()) <= 0}
               >
                 {isLoading ? (
-                    <>
-                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                            <path
-                                className="opacity-75"
-                                fill="currentColor"
-                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                            />
-                        </svg>
-                        <span>Processing...</span>
-                    </>
+                  <>
+                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                      <path
+                        className="opacity-75"
+                        fill="currentColor"
+                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                      />
+                    </svg>
+                    <span>Processing...</span>
+                  </>
                 ) : (
-                    'Confirm Withdrawal'
+                  'Confirm Withdrawal'
                 )}
               </Button>
             </ModalFooter>
