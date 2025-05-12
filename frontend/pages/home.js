@@ -1123,6 +1123,50 @@ const Home = () => {
               </CardBody>
             </Card>
 
+            {/* Get Started Section - Only show when no deposits */}
+            {userStateDetails && userStateDetails.depositAmount.toNumber() === 0 && (
+              <Card className="bg-blue-500/10 border-2 border-blue-500/20 shadow-xl overflow-hidden rounded-2xl">
+                <CardBody className="p-8">
+                  <div className="flex items-center gap-6">
+                    <div className="p-4 rounded-full bg-blue-500/20 border border-blue-500/30">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-medium mb-2">Get Started with SkillStreak</h3>
+                      <p className="text-gray-400 mb-4">Make your first deposit to start earning while learning. Lock your funds, complete daily tasks, and earn yield on your crypto.</p>
+                      <div className="flex gap-4">
+                        <Button
+                          className="bg-blue-500 hover:bg-blue-600 text-white rounded-xl"
+                          onClick={() => setShowDepositModal(true)}
+                          startContent={
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                            </svg>
+                          }
+                        >
+                          Make Your First Deposit
+                        </Button>
+                        <Button
+                          className="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl"
+                          as={Link}
+                          href="/learn"
+                          startContent={
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M10.394 2.08a1 1 0 00-.788 0l-7 3a1 1 0 000 1.84L5.25 8.051a.999.999 0 01.356-.257l4-1.714a1 1 0 11.788 1.838L7.667 9.088l1.94.831a1 1 0 00.787 0l7-3a1 1 0 000-1.838l-7-3zM3.31 9.397L5 10.12v4.102a8.969 8.969 0 00-1.05-.174 1 1 0 01-.89-.89 11.115 11.115 0 01.25-3.762zM9.3 16.573A9.026 9.026 0 007 14.935v-3.957l1.818.78a3 3 0 002.364 0l5.508-2.361a11.026 11.026 0 01.25 3.762 1 1 0 01-.89.89 8.968 8.968 0 00-5.35 2.524 1 1 0 01-1.4 0zM6 18a1 1 0 001-1v-2.065a8.935 8.935 0 00-2-.712V17a1 1 0 001 1z" />
+                            </svg>
+                          }
+                        >
+                          Learn More
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            )}
+
             {/* Status Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {/* Lock Period Card */}
@@ -1219,112 +1263,84 @@ const Home = () => {
             </div>
 
             {/* Action Buttons */}
-            <div className="fixed bottom-0 left-0 right-0 bg-[#0A0B0D]/95 backdrop-blur-md border-t border-gray-800/50 p-4">
-              <div className="max-w-4xl mx-auto flex gap-4">
-                {userStateDetails.lockInEndTimestamp.toNumber() > 0 ? (
-                  // User has an active streak, show "Continue Streak" button
+            {userStateDetails && userStateDetails.depositAmount.toNumber() > 0 && (
+              <div className="fixed bottom-0 left-0 right-0 bg-[#0A0B0D]/95 backdrop-blur-md border-t border-gray-800/50 p-4">
+                <div className="max-w-4xl mx-auto flex gap-4">
+                  {userStateDetails.lockInEndTimestamp.toNumber() > 0 ? (
+                    // User has an active streak, show "Continue Streak" button
+                    <Button
+                      className="flex-1 rounded-xl flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                      as={Link}
+                      href="/learn"
+                      disabled={isLoading}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 011.414-1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clipRule="evenodd" />
+                      </svg>
+                      <span>Continue Streak</span>
+                    </Button>
+                  ) : (
+                    // User has a deposit but no active streak, show "Start Course" button
+                    <Button
+                      className="flex-1 rounded-xl flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
+                      onClick={() => setShowStartCourseModal(true)}
+                      disabled={isLoading}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 011.414-1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clipRule="evenodd" />
+                      </svg>
+                      <span>Start Course</span>
+                    </Button>
+                  )}
+                  
+                  {/* Show Deposit button if no active streak */}
+                  {!userStateDetails.lockInEndTimestamp.toNumber() > 0 && (
+                    <Button
+                      className={`flex-1 rounded-xl flex items-center justify-center gap-2 ${
+                        isLoading 
+                          ? 'bg-blue-500 cursor-not-allowed' 
+                          : 'bg-blue-500 hover:bg-blue-600'
+                      } text-white`}
+                      onClick={() => setShowDepositModal(true)}
+                    >
+                      {isLoading ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                            <path
+                              className="opacity-75"
+                              fill="currentColor"
+                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
+                          </svg>
+                          <span>Processing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                          </svg>
+                          <span>Deposit</span>
+                        </>
+                      )}
+                    </Button>
+                  )}
+                  
                   <Button
-                    className="flex-1 rounded-xl flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-                    as={Link}
-                    href="/learn"
-                    disabled={isLoading}
+                    className="flex-1 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl"
+                    size="lg"
+                    onClick={() => setShowWithdrawModal(true)}
+                    disabled={userStateDetails.depositAmount.toNumber() === 0}
+                    startContent={
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                      </svg>
+                    }
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 011.414-1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clipRule="evenodd" />
-                    </svg>
-                    <span>Continue Streak</span>
+                    Withdraw
                   </Button>
-                ) : userStateDetails.depositAmount.toNumber() > 0 ? (
-                  // User has a deposit but no active streak, show "Start Course" button
-                  <Button
-                    className="flex-1 rounded-xl flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-                    onClick={() => setShowStartCourseModal(true)}
-                    disabled={isLoading}
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 011.414-1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clipRule="evenodd" />
-                    </svg>
-                    <span>Start Course</span>
-                  </Button>
-                ) : (
-                  // User has no deposit, show deposit button as primary action
-                  <Button
-                    className={`flex-1 rounded-xl flex items-center justify-center gap-2 ${
-                      isLoading 
-                        ? 'bg-blue-500 cursor-not-allowed' 
-                        : 'bg-blue-500 hover:bg-blue-600'
-                    } text-white`}
-                    onClick={() => setShowDepositModal(true)}
-                  >
-                    {isLoading ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          />
-                        </svg>
-                        <span>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                        </svg>
-                        <span>Deposit</span>
-                      </>
-                    )}
-                  </Button>
-                )}
-
-                {/* Always show Deposit and Withdraw buttons for flexibility */}
-                {!userStateDetails.lockInEndTimestamp.toNumber() > 0 && userStateDetails.depositAmount.toNumber() > 0 && (
-                  <Button
-                    className={`flex-1 rounded-xl flex items-center justify-center gap-2 ${
-                      isLoading 
-                        ? 'bg-blue-500 cursor-not-allowed' 
-                        : 'bg-blue-500 hover:bg-blue-600'
-                    } text-white`}
-                    onClick={() => setShowDepositModal(true)}
-                  >
-                    {isLoading ? (
-                      <>
-                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                          <path
-                            className="opacity-75"
-                            fill="currentColor"
-                            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                          />
-                        </svg>
-                        <span>Processing...</span>
-                      </>
-                    ) : (
-                      <>
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                        </svg>
-                        <span>Deposit</span>
-                      </>
-                    )}
-                  </Button>
-                )}
-                
-                <Button
-                  className="flex-1 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl"
-                  size="lg"
-                  onClick={() => setShowWithdrawModal(true)}
-                  disabled={userStateDetails.depositAmount.toNumber() === 0}
-                  startContent={
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                    </svg>
-                  }
-                >
-                  Withdraw
-                </Button>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         )}
 
