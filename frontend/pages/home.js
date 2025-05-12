@@ -2097,12 +2097,12 @@ const Home = () => {
           placement="center"
           classNames={{
             backdrop: "bg-black/60",
-            base: "bg-[#0A0B0D] border border-gray-800/50 shadow-xl text-white rounded-2xl",
+            base: "bg-[#0A0B0D] border border-gray-800/50 shadow-xl text-white rounded-2xl min-w-[400px]",
             header: "border-b border-gray-800/50",
             body: "py-6",
             footer: "border-t border-gray-800/50"
           }}
-          size="sm"
+          // Remove size="sm" to allow custom width
         >
           <ModalContent>
             <ModalHeader className="flex flex-col gap-1">
@@ -2113,19 +2113,16 @@ const Home = () => {
               {userStateDetails ? (
                 <div className="space-y-4">
                   <div className="p-4 rounded-xl bg-gray-800/50">
-                    <div className="flex justify-between mb-2">
+                    {/* Total Balance */}
+                    <div className="flex justify-between mb-3">
                       <span className="text-gray-400">Total Balance:</span>
                       <span className="font-medium">
                         {(userStateDetails.depositAmount.toNumber() / 1_000_000).toFixed(4)} USDC
                       </span>
                     </div>
-                    <div className="flex justify-between mb-2">
-                      <span className="text-gray-400">Available to Withdraw:</span>
-                      <span className="font-medium">
-                        {(Math.max(0, userStateDetails.depositAmount.toNumber() - userStateDetails.initialDepositAmount.toNumber()) / 1_000_000).toFixed(4)} USDC
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center border-t border-gray-700/50 pt-2 mt-2">
+
+                    {/* Accrued Yield */}
+                    <div className="flex justify-between mb-3">
                       <div className="flex items-center gap-2">
                         <span className="text-gray-400">Accrued Yield:</span>
                         <span className="text-xs text-gray-500">(cannot be withdrawn)</span>
@@ -2133,6 +2130,16 @@ const Home = () => {
                       <span className="font-medium text-green-400">
                         {(userStateDetails.accruedYield.toNumber() / 1_000_000).toFixed(4)} USDC
                       </span>
+                    </div>
+
+                    {/* Available to Withdraw - Made Prominent */}
+                    <div className="mt-4 p-4 rounded-lg bg-gray-700/50 border border-gray-600/50">
+                      <div className="flex justify-between items-center">
+                        <span className="text-lg font-medium text-white">Available to Withdraw:</span>
+                        <span className="text-xl font-semibold text-white">
+                          {(Math.max(0, userStateDetails.depositAmount.toNumber() - userStateDetails.initialDepositAmount.toNumber()) / 1_000_000).toFixed(4)} USDC
+                        </span>
+                      </div>
                     </div>
                   </div>
 
