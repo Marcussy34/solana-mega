@@ -407,6 +407,73 @@ export default function BettingPage() {
                 </div>
             )}
 
+            {/* Add Complete Task Section */}
+            <div style={{ 
+                marginTop: '30px', 
+                padding: '20px', 
+                borderRadius: '8px',
+                backgroundColor: '#f0f8ff',
+                border: '1px solid #b3d7ff'
+            }}>
+                <h2 style={{ marginBottom: '15px', color: '#0056b3' }}>Task Completion</h2>
+                <p style={{ marginBottom: '15px', color: '#666' }}>
+                    Click the button below to record a task completion and update your streak.
+                </p>
+                <button 
+                    onClick={async () => {
+                        if (!program || !publicKey) {
+                            log("Program or wallet not connected");
+                            return;
+                        }
+                        setIsLoading(true);
+                        try {
+                            // Derive user state PDA
+                            const [userStatePDA] = PublicKey.findProgramAddressSync(
+                                [Buffer.from("user"), publicKey.toBuffer()],
+                                program.programId
+                            );
+
+                            // Call record_task instruction
+                            const tx = await program.methods
+                                .recordTask()
+                                .accounts({
+                                    user: publicKey,
+                                    userState: userStatePDA,
+                                    systemProgram: SystemProgram.programId,
+                                })
+                                .rpc();
+
+                            log("Task completed successfully!");
+                            log("Transaction signature:", tx);
+                            setTxSig(tx);
+
+                            // Fetch and display updated user state
+                            const updatedUserState = await program.account.userState.fetch(userStatePDA);
+                            log("Current streak:", updatedUserState.currentStreak.toString());
+                            log("Last activity:", new Date(updatedUserState.lastTaskTimestamp * 1000).toLocaleString());
+                        } catch (error) {
+                            log("Error completing task:", error.message);
+                            console.error("Complete Task Error:", error);
+                        } finally {
+                            setIsLoading(false);
+                        }
+                    }}
+                    disabled={isLoading || !publicKey}
+                    style={{
+                        padding: '12px 24px',
+                        fontSize: '16px',
+                        backgroundColor: isLoading ? '#ccc' : '#28a745',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '5px',
+                        cursor: isLoading ? 'not-allowed' : 'pointer',
+                        transition: 'background-color 0.3s'
+                    }}
+                >
+                    {isLoading ? 'Recording Task...' : 'Complete Task'}
+                </button>
+            </div>
+
             <div style={{ marginTop: '30px', borderTop: '1px solid #ccc', paddingTop: '10px' }}>
                 <h3>Activity Logs:</h3>
                 <pre style={{ maxHeight: '300px', overflowY: 'auto', background: '#f8f9fa', padding: '10px', borderRadius: '5px', whiteSpace: 'pre-wrap', wordWrap: 'break-word', color: '#333', fontSize: '0.9em' }}>
