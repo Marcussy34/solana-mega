@@ -931,7 +931,10 @@ const Home = () => {
     return date.toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric', 
-      year: 'numeric'
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
     });
   };
 
@@ -1311,11 +1314,11 @@ const Home = () => {
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <p className="text-gray-400 mb-1">Started</p>
-                          <p>{formatDate(userStateDetails.depositTimestamp.toNumber())}</p>
+                          <p className="font-mono">{formatDate(userStateDetails.depositTimestamp.toNumber())}</p>
                         </div>
                         <div>
                           <p className="text-gray-400 mb-1">Ends</p>
-                          <p>{formatDate(userStateDetails.lockInEndTimestamp.toNumber())}</p>
+                          <p className="font-mono">{formatDate(userStateDetails.lockInEndTimestamp.toNumber())}</p>
                         </div>
                       </div>
                       <Progress 
