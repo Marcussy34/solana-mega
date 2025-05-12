@@ -1098,13 +1098,13 @@ const Home = () => {
                   <div>
                     <div className="flex items-baseline gap-2">
                       <span className="text-4xl font-medium tracking-tight">
-                        {(userStateDetails.depositAmount.toNumber() / 1_000_000).toFixed(2)}
+                        {((userStateDetails.depositAmount.toNumber() - userStateDetails.initialDepositAmount.toNumber()) / 1_000_000).toFixed(2)}
                       </span>
                       <span className="text-gray-400">USDC</span>
                     </div>
                     <div className="mt-4 grid grid-cols-2 gap-8">
                       <div>
-                        <p className="text-sm text-gray-400 mb-1">Initial Deposit</p>
+                        <p className="text-sm text-gray-400 mb-1">Locked Amount</p>
                         <p className="text-lg font-medium">
                           {(userStateDetails.initialDepositAmount.toNumber() / 1_000_000).toFixed(2)}
                           <span className="text-sm text-gray-400 ml-1">USDC</span>
@@ -1138,7 +1138,7 @@ const Home = () => {
                       <h3 className="font-medium">Lock Period</h3>
                     </div>
                     <Chip 
-                      className={`${getLockStatus().color === 'success' ? 
+                      className={`${getLockStatus().label === 'Active' ? 
                         'bg-green-500/10 border-green-500/20 text-green-400' : 
                         'bg-gray-500/10 border-gray-500/20 text-gray-400'
                       } border`}

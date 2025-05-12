@@ -94,8 +94,9 @@ pub mod skillstreak_program {
             .checked_add(deposit_amount)
             .ok_or(ErrorCode::ArithmeticError)?;
 
-        // We don't update initial_deposit_amount, current_streak, miss_count, or last_task_timestamp here
-        // Only the deposit_amount is updated.
+        // Reset initial_deposit_amount since we're modifying the deposit
+        // It will be set to the full deposit_amount when starting a course
+        user_state.initial_deposit_amount = 0;
 
         msg!("Updated User State:");
         msg!("  New Total Deposit: {}", user_state.deposit_amount);
@@ -129,6 +130,7 @@ pub mod skillstreak_program {
         }
 
         // --- 1. Update User State for Course Start ---
+        // Set initial_deposit_amount to current deposit_amount - this is now locked in
         user_state.initial_deposit_amount = user_state.deposit_amount;
         user_state.deposit_timestamp = current_timestamp;
         let lock_in_seconds = lock_in_duration_days
@@ -137,16 +139,15 @@ pub mod skillstreak_program {
         user_state.lock_in_end_timestamp = current_timestamp
             .checked_add(lock_in_seconds as i64)
             .ok_or(ErrorCode::ArithmeticError)?;
-        // Set last task timestamp to now, starting the streak timer.
-        // This is crucial for the first market's task_deadline.
+        // Set last task timestamp to now, starting the streak timer
         user_state.last_task_timestamp = current_timestamp;
-        user_state.current_streak = 0; // Streak starts at 0, first task completion increments it
+        user_state.current_streak = 0;
         user_state.miss_count = 0;
 
         msg!("Course started successfully for user state.");
-        msg!("  Initial Deposit Locked: {}", user_state.initial_deposit_amount);
+        msg!("  Amount Locked: {}", user_state.initial_deposit_amount);
         msg!("  Lock-in Ends At: {}", user_state.lock_in_end_timestamp);
-        msg!("  Streak Timer Started At (Last Task Timestamp): {}", user_state.last_task_timestamp);
+        msg!("  Streak Timer Started At: {}", user_state.last_task_timestamp);
 
         // --- 2. Automatically Create Betting Market ---
         msg!("Automatically creating betting market for user: {}", ctx.accounts.user.key());
@@ -237,6 +238,7 @@ pub mod skillstreak_program {
 
         // Reset user state values
         user_state.deposit_amount = 0;
+        user_state.initial_deposit_amount = 0; // Reset initial deposit amount
         user_state.accrued_yield = 0;
         user_state.lock_in_end_timestamp = 0;
 
@@ -294,6 +296,7 @@ pub mod skillstreak_program {
 
         // Reset user state values
         user_state.deposit_amount = 0;
+        user_state.initial_deposit_amount = 0; // Reset initial deposit amount
         user_state.accrued_yield = 0;
         user_state.lock_in_end_timestamp = 0;
 
