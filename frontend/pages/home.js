@@ -259,6 +259,21 @@ const Home = () => {
         if (simulationResult.value.err) {
           console.error("Simulation Error:", simulationResult.value.err);
           console.log("Simulation Logs:", simulationResult.value.logs);
+          
+          // Check if the error is due to insufficient funds
+          const isInsufficientFunds = simulationResult.value.logs?.some(log => 
+            log.toLowerCase().includes('insufficient funds')
+          );
+          
+          if (isInsufficientFunds) {
+            setTransactionStatus({
+              type: 'error',
+              message: 'Insufficient USDC balance. Please make sure you have enough USDC in your wallet.'
+            });
+            setShowDepositModal(false);
+            throw new Error('Insufficient funds');
+          }
+          
           throw new Error(`Transaction simulation failed: ${simulationResult.value.err}`);
         }
         console.log("Transaction simulation successful.");
@@ -266,6 +281,20 @@ const Home = () => {
         console.error("Error during simulation:", simError);
         if (simError.simulationLogs) {
           console.log("Simulation Logs (from catch):", simError.simulationLogs);
+          
+          // Check for insufficient funds in catch block as well
+          const isInsufficientFunds = simError.simulationLogs.some(log => 
+            log.toLowerCase().includes('insufficient funds')
+          );
+          
+          if (isInsufficientFunds) {
+            setTransactionStatus({
+              type: 'error',
+              message: 'Insufficient USDC balance. Please make sure you have enough USDC in your wallet.'
+            });
+            setShowDepositModal(false);
+            return;
+          }
         }
         setTransactionStatus({
           type: 'error',
@@ -1005,8 +1034,8 @@ const Home = () => {
             style={{
               opacity: notificationVisible ? 1 : 0,
               transform: notificationVisible ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'all 0.5s ease-in-out', // Slower, smoother transition
-              pointerEvents: 'none' // Prevent notification from blocking interactions
+              transition: 'all 0.5s ease-in-out',
+              pointerEvents: 'none'
             }}
           >
             <Card 
@@ -1017,23 +1046,23 @@ const Home = () => {
                 border shadow-lg backdrop-blur-sm
               `}
             >
-              <CardBody className="py-4 px-5"> {/* Slightly larger padding */}
-                <div className="flex items-center gap-3">
+              <CardBody className="py-4 px-5">
+                <div className="flex items-start gap-3"> {/* Changed from items-center to items-start */}
                   {transactionStatus.type === 'success' ? (
-                    <div className="rounded-full p-2 bg-green-500/20"> {/* Larger icon padding */}
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                    <div className="rounded-full p-2 bg-green-500/20 mt-0.5"> {/* Added mt-0.5 for better alignment */}
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                     </div>
                   ) : transactionStatus.type === 'error' ? (
-                    <div className="rounded-full p-2 bg-red-500/20"> {/* Larger icon padding */}
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                    <div className="rounded-full p-2 bg-red-500/20 mt-0.5"> {/* Added mt-0.5 for better alignment */}
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                       </svg>
                     </div>
                   ) : (
-                    <div className="rounded-full p-2 bg-blue-500/20"> {/* Larger icon padding */}
-                      <svg className="animate-spin h-6 w-6 text-blue-400" viewBox="0 0 24 24">
+                    <div className="rounded-full p-2 bg-blue-500/20 mt-0.5"> {/* Added mt-0.5 for better alignment */}
+                      <svg className="animate-spin h-5 w-5 text-blue-400" viewBox="0 0 24 24">
                         <path
                           className="opacity-75"
                           fill="currentColor"
@@ -1042,13 +1071,20 @@ const Home = () => {
                       </svg>
                     </div>
                   )}
-                  <p className={`text-sm font-medium ${
-                    transactionStatus.type === 'success' ? 'text-green-400' :
-                    transactionStatus.type === 'error' ? 'text-red-400' :
-                    'text-blue-400'
-                  }`}>
-                    {transactionStatus.message}
-                  </p>
+                  <div className="flex-1"> {/* Added wrapper div for text content */}
+                    <p className={`text-sm font-medium ${
+                      transactionStatus.type === 'success' ? 'text-green-400' :
+                      transactionStatus.type === 'error' ? 'text-red-400' :
+                      'text-blue-400'
+                    }`}>
+                      {transactionStatus.message}
+                    </p>
+                    {transactionStatus.type === 'error' && transactionStatus.message.includes('USDC') && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        Need USDC? Visit the faucet to get some test tokens.
+                      </p>
+                    )}
+                  </div>
                 </div>
               </CardBody>
             </Card>
@@ -1135,7 +1171,7 @@ const Home = () => {
                     </div>
                     <div className="flex-1">
                       <h3 className="text-xl font-medium mb-2">Get Started with SkillStreak</h3>
-                      <p className="text-gray-400 mb-4">Make your first deposit to start earning while learning. Lock your funds, complete daily tasks, and earn yield on your crypto.</p>
+                      <p className="text-gray-400 mb-4">Make your first deposit to start earning while learning. </p>
                       <div className="flex gap-4">
                         <Button
                           className="bg-blue-500 hover:bg-blue-600 text-white rounded-xl"
@@ -1148,6 +1184,40 @@ const Home = () => {
                         >
                           Make Your First Deposit
                         </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardBody>
+              </Card>
+            )}
+
+            {/* Start Your First Streak Section - Show when has deposits but no streak */}
+            {userStateDetails && 
+              userStateDetails.depositAmount.toNumber() > 0 && 
+              !userStateDetails.lockInEndTimestamp.toNumber() && (
+              <Card className="bg-green-500/10 border-2 border-green-500/20 shadow-xl overflow-hidden rounded-2xl">
+                <CardBody className="p-8">
+                  <div className="flex items-center gap-6">
+                    <div className="p-4 rounded-full bg-green-500/20 border border-green-500/30">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-medium mb-2">Start Your First Streak</h3>
+                      <p className="text-gray-400 mb-4">You're ready to begin! Lock your funds, maintain your streak by completing daily tasks, and earn higher yields on your deposit.</p>
+                      <div className="flex gap-4">
+                        <Button
+                          className="bg-green-600 hover:bg-green-700 text-white rounded-xl"
+                          onClick={() => setShowStartStreakModal(true)}
+                          startContent={
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 011.414-1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clipRule="evenodd" />
+                            </svg>
+                          }
+                        >
+                          Start Your First Streak
+                        </Button>
                         <Button
                           className="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl"
                           as={Link}
@@ -1158,7 +1228,7 @@ const Home = () => {
                             </svg>
                           }
                         >
-                          Learn More
+                          View Tasks
                         </Button>
                       </div>
                     </div>
