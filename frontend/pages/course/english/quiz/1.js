@@ -53,7 +53,7 @@ const QuizPage1 = () => {
         <button 
           type="submit" 
           disabled={selectedAnswer === null}
-          className="w-full px-6 py-3 rounded-md bg-zinc-600 text-zinc-100 hover:bg-zinc-500 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed transition-colors font-medium"
+          className="w-full px-6 py-3 rounded-md bg-green-600 text-white hover:bg-green-500 disabled:bg-zinc-800 disabled:text-zinc-500 disabled:cursor-not-allowed transition-colors font-medium"
         >
           Submit Answer
         </button>
