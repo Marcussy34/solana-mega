@@ -170,7 +170,7 @@ const Home = () => {
   const [depositAmount, setDepositAmount] = useState('0.5');
   const [lockInDays, setLockInDays] = useState('30');
   const [showDepositModal, setShowDepositModal] = useState(false);
-  const [showStartCourseModal, setShowStartCourseModal] = useState(false);
+  const [showStartStreakModal, setShowStartStreakModal] = useState(false);
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState(null);
   const [notificationVisible, setNotificationVisible] = useState(false);
@@ -846,7 +846,7 @@ const Home = () => {
       console.log('Transaction confirmed successfully.');
       
       // Close modal and update state
-      setShowStartCourseModal(false);
+      setShowStartStreakModal(false);
       setLockInDays('30');
       await fetchAndUpdateUserState();
       
@@ -1280,16 +1280,16 @@ const Home = () => {
                       <span>Continue Streak</span>
                     </Button>
                   ) : (
-                    // User has a deposit but no active streak, show "Start Course" button
+                    // User has a deposit but no active streak, show "Start Streak" button
                     <Button
                       className="flex-1 rounded-xl flex items-center justify-center gap-2 bg-green-600 hover:bg-green-700 text-white"
-                      onClick={() => setShowStartCourseModal(true)}
+                      onClick={() => setShowStartStreakModal(true)}
                       disabled={isLoading}
                     >
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 011.414-1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clipRule="evenodd" />
                       </svg>
-                      <span>Start Course</span>
+                      <span>Start Streak</span>
                     </Button>
                   )}
                   
@@ -1454,10 +1454,10 @@ const Home = () => {
           </ModalContent>
         </Modal>
 
-        {/* Start Course Modal */}
+        {/* Start Streak Modal */}
         <Modal 
-          isOpen={showStartCourseModal} 
-          onClose={() => setShowStartCourseModal(false)}
+          isOpen={showStartStreakModal} 
+          onClose={() => setShowStartStreakModal(false)}
           backdrop="blur"
           placement="center"
           classNames={{
@@ -1543,7 +1543,7 @@ const Home = () => {
             <ModalFooter>
               <Button 
                 className="flex-1 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl"
-                onClick={() => setShowStartCourseModal(false)}
+                onClick={() => setShowStartStreakModal(false)}
               >
                 Cancel
               </Button>
