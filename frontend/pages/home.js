@@ -1682,41 +1682,7 @@ const Home = () => {
             </ModalHeader>
             <ModalBody>
               <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Lock-in Duration (Days)</label>
-                  <Input
-                    type="number"
-                    value={lockInDays}
-                    onChange={(e) => setLockInDays(e.target.value)}
-                    min="1"
-                    step="1"
-                    variant="flat"
-                    className="w-full"
-                    endContent={
-                      <div className="flex items-center">
-                        <span className="text-gray-400">days</span>
-                      </div>
-                    }
-                    classNames={{
-                      input: [
-                        "text-lg",
-                        "font-medium",
-                        "bg-transparent",
-                      ],
-                      inputWrapper: [
-                        "h-12",
-                        "bg-gray-800/50",
-                        "hover:bg-gray-800",
-                        "group-data-[focused=true]:bg-gray-800",
-                        "!border-0",
-                        "shadow-none",
-                        "rounded-xl"
-                      ]
-                    }}
-                  />
-                </div>
-
-                {/* Add Lock Amount Input */}
+                {/* Lock Amount Input - Moved Up */}
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Lock Amount (USDC)</label>
                   <Input
@@ -1743,6 +1709,41 @@ const Home = () => {
                         "font-medium",
                         "bg-transparent",
                         "pl-1"
+                      ],
+                      inputWrapper: [
+                        "h-12",
+                        "bg-gray-800/50",
+                        "hover:bg-gray-800",
+                        "group-data-[focused=true]:bg-gray-800",
+                        "!border-0",
+                        "shadow-none",
+                        "rounded-xl"
+                      ]
+                    }}
+                  />
+                </div>
+
+                {/* Lock-in Duration - Moved Down */}
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Lock-in Duration (Days)</label>
+                  <Input
+                    type="number"
+                    value={lockInDays}
+                    onChange={(e) => setLockInDays(e.target.value)}
+                    min="1"
+                    step="1"
+                    variant="flat"
+                    className="w-full"
+                    endContent={
+                      <div className="flex items-center">
+                        <span className="text-gray-400">days</span>
+                      </div>
+                    }
+                    classNames={{
+                      input: [
+                        "text-lg",
+                        "font-medium",
+                        "bg-transparent",
                       ],
                       inputWrapper: [
                         "h-12",
