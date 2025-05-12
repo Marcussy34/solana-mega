@@ -3,16 +3,22 @@ import { Sidebar, SidebarBody, SidebarLink } from '@/components/ui/sidebar'; // 
 import { BentoGrid, BentoGridItem } from '@/components/ui/bento-grid';
 import { IconClipboardCheck, IconBook, IconBrandReact, IconAward, IconLogout } from '@tabler/icons-react'; // Example icons
 
-// Placeholder for header components in BentoGridItems
-const SkeletonHeader = ({ className }) => (
-  <div className={`flex flex-1 w-full h-full min-h-[6rem] rounded-xl bg-gradient-to-br from-neutral-800 dark:from-neutral-50 dark:to-neutral-100 to-neutral-900 ${className}`} />
+// Updated Header component with specific image path
+const ImageHeader = ({ imagePath }) => (
+  <div className="flex flex-1 w-full h-full min-h-[10rem] rounded-xl overflow-hidden"> {/* Increased min-h */} 
+    <img 
+      src={imagePath} // Use the provided imagePath
+      alt="Subject Image"
+      className="object-cover w-full h-full transition-all duration-300" // Removed grayscale filter
+    />
+  </div>
 );
 
 const learnPageSubjects = [
   {
     title: "English",
     description: "by Duolingo",
-    header: <SkeletonHeader className="bg-green-500" />,
+    header: <ImageHeader imagePath="/image/english.png" />, // Pass specific image path
     icon: <IconBook className="h-4 w-4 text-neutral-500" />,
     className: "md:col-span-1",
     href: "/course/english"
@@ -20,19 +26,19 @@ const learnPageSubjects = [
   {
     title: "Solana 101",
     description: "Introduction to Solana Development",
-    header: <SkeletonHeader className="bg-purple-500" />,
+    header: <ImageHeader imagePath="/image/solana.jpeg" />, // Updated image path to use .jpeg
     icon: <IconBrandReact className="h-4 w-4 text-neutral-500" />,
     className: "md:col-span-1",
     href: "/course/solana-101"
   },
-  // Add 7 more random subjects
-  ...Array.from({ length: 7 }, (_, i) => ({
-    title: `Subject ${i + 3}`,
-    description: `Learn about random topic ${i + 3}`,
-    header: <SkeletonHeader />,
-    icon: <IconClipboardCheck className="h-4 w-4 text-neutral-500" />,
-    className: "md:col-span-1",
-  })),
+  // Remove the generation of 7 random subjects
+  // ...Array.from({ length: 7 }, (_, i) => ({
+  //   title: `Subject ${i + 3}`,
+  //   description: `Learn about random topic ${i + 3}`,
+  //   header: <ImageHeader imagePath={`https://picsum.photos/seed/random${i}/400/200`} />, // Fallback or different logic if uncommented
+  //   icon: <IconClipboardCheck className="h-4 w-4 text-neutral-500" />,
+  //   className: "md:col-span-1",
+  // })),
 ];
 
 const LearnPage = () => {
