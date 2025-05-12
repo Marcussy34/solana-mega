@@ -254,11 +254,9 @@ pub mod skillstreak_program {
             .checked_div(2)
             .ok_or(ErrorCode::ArithmeticError)?;
         
-        // Calculate amount to return to balance (50% of deposit + all yield)
+        // Calculate amount to return (ONLY 50% of locked deposit)
         let return_amount = user_state.initial_deposit_amount
             .checked_sub(penalty_amount)
-            .ok_or(ErrorCode::ArithmeticError)?
-            .checked_add(user_state.accrued_yield)
             .ok_or(ErrorCode::ArithmeticError)?;
 
         // Transfer penalty to treasury
@@ -275,15 +273,21 @@ pub mod skillstreak_program {
             token::transfer(cpi_ctx, penalty_amount)?;
         }
 
-        // Add remaining amount to user's balance
+        // Update user state - add return amount back to deposit_amount
+        // First subtract the full locked amount
+        user_state.deposit_amount = user_state.deposit_amount
+            .checked_sub(user_state.initial_deposit_amount)
+            .ok_or(ErrorCode::ArithmeticError)?;
+        
+        // Then add back the 50% we're returning
         user_state.deposit_amount = user_state.deposit_amount
             .checked_add(return_amount)
             .ok_or(ErrorCode::ArithmeticError)?;
-
-        // Reset locked amount and yield
+        
+        // Reset locked amount but keep yield counter
         user_state.initial_deposit_amount = 0;
-        user_state.accrued_yield = 0;
         user_state.lock_in_end_timestamp = 0;
+        // Do NOT reset accrued_yield as it's just a counter now
 
         // Close market accounts if they exist
         let dest_starting_lamports = ctx.accounts.user.lamports();
@@ -304,7 +308,7 @@ pub mod skillstreak_program {
 
         msg!("Early withdrawal completed:");
         msg!("  Penalty sent to treasury: {}", penalty_amount);
-        msg!("  Amount added to balance: {}", return_amount);
+        msg!("  Amount added back to balance: {}", return_amount);
         msg!("  Market accounts closed successfully");
         
         Ok(())
