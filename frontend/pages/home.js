@@ -1241,6 +1241,17 @@ const Home = () => {
                             </div>
                             <div className="flex items-center gap-4">
                                 <Button
+                                    className="bg-green-600/50 hover:bg-green-500/50 border border-green-500/50 rounded-xl px-4 py-2"
+                                    onClick={() => setShowDepositModal(true)}
+                                    startContent={
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
+                                        </svg>
+                                    }
+                                >
+                                    Deposit
+                                </Button>
+                                <Button
                                     className="bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/50 rounded-xl px-4 py-2"
                                     onClick={() => setShowWithdrawUnlockedModal(true)}
                                     startContent={
@@ -1271,11 +1282,18 @@ const Home = () => {
                                 </span>
                                 <span className="text-gray-400">USDC</span>
                             </div>
-                            <div className="mt-4 grid grid-cols-2 gap-8">
+                            <div className="mt-4 grid grid-cols-3 gap-6">
                                 <div>
                                     <p className="text-sm text-gray-400 mb-1">Locked Amount</p>
                                     <p className="text-lg font-medium">
                                         {(userStateDetails.initialDepositAmount.toNumber() / 1_000_000).toFixed(2)}
+                                        <span className="text-sm text-gray-400 ml-1">USDC</span>
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-400 mb-1">Total Balance</p>
+                                    <p className="text-lg font-medium">
+                                        {(userStateDetails.depositAmount.toNumber() / 1_000_000).toFixed(2)}
                                         <span className="text-sm text-gray-400 ml-1">USDC</span>
                                     </p>
                                 </div>
@@ -1347,7 +1365,7 @@ const Home = () => {
                       {!userStateDetails.lockInEndTimestamp.toNumber() ? (
                         // Content for starting streak
                         <>
-                          <h3 className="text-xl font-medium mb-2">Start Your First Streak</h3>
+                          <h3 className="text-xl font-medium mb-2">Start a Streak</h3>
                           <p className="text-gray-400 mb-4">You're ready to begin! Lock your funds, maintain your streak by completing daily tasks, and earn higher yields on your deposit.</p>
                           <div className="flex gap-4">
                             <Button
@@ -1359,7 +1377,7 @@ const Home = () => {
                                 </svg>
                               }
                             >
-                              Start Your First Streak
+                              Start Your Streak
                             </Button>
                             <Button
                               className="bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl"
@@ -1510,24 +1528,24 @@ const Home = () => {
             </div>
 
             {/* Action Buttons */}
-            {userStateDetails && userStateDetails.depositAmount.toNumber() > 0 && (
-              <div className="fixed bottom-0 left-0 right-0 bg-[#0A0B0D]/95 backdrop-blur-md border-t border-gray-800/50 p-4">
-                <div className="max-w-4xl mx-auto flex gap-4">
-                  <Button
-                    className="flex-1 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl"
-                    size="lg"
-                    onClick={() => setShowWithdrawModal(true)}
-                    disabled={userStateDetails.depositAmount.toNumber() === 0}
-                    startContent={
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                      </svg>
-                    }
-                  >
-                    Withdraw
-                  </Button>
+            {userStateDetails && userStateDetails.initialDepositAmount.toNumber() > 0 && (
+                <div className="fixed bottom-0 left-0 right-0 bg-[#0A0B0D]/95 backdrop-blur-md border-t border-gray-800/50 p-4">
+                    <div className="max-w-4xl mx-auto flex gap-4">
+                        <Button
+                            className="flex-1 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl"
+                            size="lg"
+                            onClick={() => setShowWithdrawModal(true)}
+                            disabled={userStateDetails.initialDepositAmount.toNumber() === 0}
+                            startContent={
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                                </svg>
+                            }
+                        >
+                            Withdraw Locked Funds ({(userStateDetails.initialDepositAmount.toNumber() / 1_000_000).toFixed(2)} USDC)
+                        </Button>
+                    </div>
                 </div>
-              </div>
             )}
           </div>
         )}
@@ -1821,41 +1839,40 @@ const Home = () => {
         >
           <ModalContent>
             <ModalHeader className="flex flex-col gap-1">
-              <h3 className="text-xl font-medium">Withdraw Funds</h3>
+              <h3 className="text-xl font-medium">Withdraw Locked Funds</h3>
+              <p className="text-sm text-gray-400">Withdraw from your active streak</p>
             </ModalHeader>
             <ModalBody>
               {userStateDetails && (
                 <div className="space-y-4">
-                  <div className="p-4 rounded-xl bg-gray-800/50">
-                    <div className="flex justify-between mb-2">
-                      <span className="text-gray-400">Total Balance:</span>
-                      <span className="font-medium">{(userStateDetails.depositAmount.toNumber() / 1_000_000).toFixed(4)} USDC</span>
+                    <div className="p-4 rounded-xl bg-gray-800/50">
+                        <div className="flex justify-between mb-2">
+                            <span className="text-gray-400">Locked Balance:</span>
+                            <span className="font-medium">{(userStateDetails.initialDepositAmount.toNumber() / 1_000_000).toFixed(4)} USDC</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">Accrued Yield:</span>
+                            <span className="font-medium text-green-400">+{(userStateDetails.accruedYield.toNumber() / 1_000_000).toFixed(4)} USDC</span>
+                        </div>
                     </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-400">Accrued Yield:</span>
-                      <span className="font-medium text-green-400">+{(userStateDetails.accruedYield.toNumber() / 1_000_000).toFixed(4)} USDC</span>
-                    </div>
-                  </div>
 
-                  {/* Available amount card */}
-                  <div className="p-4 rounded-xl bg-gray-700/30 border border-gray-600/50">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-medium text-white">Available to Withdraw:</span>
-                      <span className="text-xl font-semibold text-white">
-                        {(calculateAvailableWithdrawal(userStateDetails).available / 1_000_000).toFixed(4)} USDC
-                      </span>
+                    {/* Available amount card */}
+                    <div className="p-4 rounded-xl bg-gray-700/30 border border-gray-600/50">
+                        <div className="flex justify-between items-center">
+                            <span className="text-lg font-medium text-white">Available to Withdraw:</span>
+                            <span className="text-xl font-semibold text-white">
+                                {(userStateDetails.initialDepositAmount.toNumber() * 0.5 / 1_000_000).toFixed(4)} USDC
+                            </span>
+                        </div>
                     </div>
-                  </div>
-                  
-                  {calculateAvailableWithdrawal(userStateDetails).locked && (
+                    
                     <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
-                      <p className="text-sm text-blue-400">
-                        <strong>Note:</strong> Your funds are currently locked in an active streak. You can withdraw up to 50% of your total balance during the lock period.
-                      </p>
+                        <p className="text-sm text-blue-400">
+                            <strong>Note:</strong> Your funds are currently locked in an active streak. You can withdraw up to 50% of your locked balance during the lock period.
+                        </p>
                     </div>
-                  )}
                 </div>
-              )}
+            )}
             </ModalBody>
             <ModalFooter>
               <Button 
@@ -1866,26 +1883,26 @@ const Home = () => {
               </Button>
               <Button 
                 className={`flex-1 rounded-xl flex items-center justify-center gap-2 ${
-                  isLoading 
-                    ? 'bg-blue-500 cursor-not-allowed' 
-                    : 'bg-blue-500 hover:bg-blue-600'
+                    isLoading 
+                        ? 'bg-blue-500 cursor-not-allowed' 
+                        : 'bg-blue-500 hover:bg-blue-600'
                 } text-white`}
                 onClick={handleWithdraw}
-                disabled={isLoading || !userStateDetails || calculateAvailableWithdrawal(userStateDetails).available === 0}
+                disabled={isLoading || !userStateDetails || userStateDetails.initialDepositAmount.toNumber() === 0}
               >
                 {isLoading ? (
-                  <>
-                    <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                      <path
-                        className="opacity-75"
-                        fill="currentColor"
-                        d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                      />
-                    </svg>
-                    <span>Processing...</span>
-                  </>
+                    <>
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                            <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
+                        </svg>
+                        <span>Processing...</span>
+                    </>
                 ) : (
-                  'Confirm Withdrawal'
+                    'Confirm Withdrawal'
                 )}
               </Button>
             </ModalFooter>
@@ -1923,9 +1940,9 @@ const Home = () => {
                             </span>
                         </div>
                         <div className="flex justify-between">
-                            <span className="text-gray-400">Unlocked Amount:</span>
+                            <span className="text-gray-400">Available to Withdraw:</span>
                             <span className="font-medium">
-                                {((userStateDetails.depositAmount.toNumber() - userStateDetails.initialDepositAmount.toNumber()) / 1_000_000).toFixed(4)} USDC
+                                {(Math.max(0, userStateDetails.depositAmount.toNumber() - userStateDetails.initialDepositAmount.toNumber()) / 1_000_000).toFixed(4)} USDC
                             </span>
                         </div>
                     </div>
@@ -1936,7 +1953,7 @@ const Home = () => {
                                 <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                             </svg>
                             <p className="text-xs text-blue-400">
-                                This will withdraw all your unlocked balance to your wallet. Locked funds will remain in the program.
+                                This will withdraw your available unlocked balance to your wallet. Locked funds will remain in the program.
                             </p>
                         </div>
                     </div>

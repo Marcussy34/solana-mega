@@ -94,12 +94,9 @@ pub mod skillstreak_program {
             .checked_add(deposit_amount)
             .ok_or(ErrorCode::ArithmeticError)?;
 
-        // Reset initial_deposit_amount since we're modifying the deposit
-        // It will be set to the full deposit_amount when starting a course
-        user_state.initial_deposit_amount = 0;
-
         msg!("Updated User State:");
         msg!("  New Total Deposit: {}", user_state.deposit_amount);
+        msg!("  Locked Amount: {}", user_state.initial_deposit_amount);
 
         Ok(())
     }
