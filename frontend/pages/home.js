@@ -1846,57 +1846,48 @@ const Home = () => {
                 </div>
 
                 {/* Lock-in Period Section */}
-                <div className="space-y-4">
-                  <h4 className="text-sm text-gray-400">Lock-in Period</h4>
+                <div>
+                  <h4 className="text-sm text-gray-400 mb-3">Lock-in Period</h4>
                   <div className="grid grid-cols-2 gap-2">
                     <Button
-                      className={`p-4 ${lockInDays === '30' ? 
+                      className={`h-[52px] ${lockInDays === '30' ? 
                         'bg-blue-500/20 border-blue-500/30 text-blue-400' : 
-                        'bg-gray-800/50 border-gray-700/50'} border rounded-xl`}
+                        'bg-gray-800/50 border-gray-700/50 hover:bg-gray-700/50'} border rounded-xl flex flex-col items-start justify-center px-4`}
                       onClick={() => setLockInDays('30')}
                     >
-                      <div className="text-left">
-                        <div className="font-medium">1 Month</div>
-                        <div className="text-sm text-gray-400">1%</div>
-                      </div>
+                      <div className="font-medium">1 Month</div>
+                      <div className="text-xs text-gray-400">1%</div>
                     </Button>
                     <Button
-                      className={`p-4 ${lockInDays === '90' ? 
+                      className={`h-[52px] ${lockInDays === '90' ? 
                         'bg-blue-500/20 border-blue-500/30 text-blue-400' : 
-                        'bg-gray-800/50 border-gray-700/50'} border rounded-xl`}
+                        'bg-gray-800/50 border-gray-700/50 hover:bg-gray-700/50'} border rounded-xl flex flex-col items-start justify-center px-4`}
                       onClick={() => setLockInDays('90')}
                     >
-                      <div className="text-left">
-                        <div className="font-medium">3 Months</div>
-                        <div className="text-sm text-gray-400">2%</div>
-                      </div>
+                      <div className="font-medium">3 Months</div>
+                      <div className="text-xs text-gray-400">2%</div>
                     </Button>
                     <Button
-                      className={`p-4 ${lockInDays === '180' ? 
+                      className={`h-[52px] ${lockInDays === '180' ? 
                         'bg-blue-500/20 border-blue-500/30 text-blue-400' : 
-                        'bg-gray-800/50 border-gray-700/50'} border rounded-xl`}
+                        'bg-gray-800/50 border-gray-700/50 hover:bg-gray-700/50'} border rounded-xl flex flex-col items-start justify-center px-4`}
                       onClick={() => setLockInDays('180')}
                     >
-                      <div className="text-left">
-                        <div className="font-medium">6 Months</div>
-                        <div className="text-sm text-gray-400">3.5%</div>
-                      </div>
+                      <div className="font-medium">6 Months</div>
+                      <div className="text-xs text-gray-400">3.5%</div>
                     </Button>
                     <Button
-                      className={`p-4 ${lockInDays === '365' ? 
+                      className={`h-[52px] ${lockInDays === '365' ? 
                         'bg-blue-500/20 border-blue-500/30 text-blue-400' : 
-                        'bg-gray-800/50 border-gray-700/50'} border rounded-xl`}
+                        'bg-gray-800/50 border-gray-700/50 hover:bg-gray-700/50'} border rounded-xl flex flex-col items-start justify-center px-4`}
                       onClick={() => setLockInDays('365')}
                     >
-                      <div className="text-left">
-                        <div className="font-medium">1 Year</div>
-                        <div className="text-sm text-gray-400">6-8%</div>
-                      </div>
+                      <div className="font-medium">1 Year</div>
+                      <div className="text-xs text-gray-400">6-8%</div>
                     </Button>
                   </div>
 
-                  {/* Custom Lock-in Period Input */}
-                  <div>
+                  <div className="mt-3">
                     <Input
                       type="number"
                       value={lockInDays}
@@ -1905,7 +1896,6 @@ const Home = () => {
                       step="1"
                       variant="flat"
                       className="w-full"
-                      placeholder="Custom duration in days"
                       endContent={
                         <div className="flex items-center">
                           <span className="text-gray-400">days</span>
