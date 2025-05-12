@@ -765,6 +765,10 @@ const Home = () => {
             if (simulation.value.err) {
               console.error('Simulation error:', simulation.value.err);
               console.log('Simulation logs:', simulation.value.logs);
+              setTransactionStatus({ 
+                type: 'error', 
+                message: 'Insufficient SOL balance. Please add some SOL to your wallet to create a profile.' 
+              });
               throw new Error(`Transaction simulation failed: ${simulation.value.err}`);
             }
 
@@ -785,10 +789,22 @@ const Home = () => {
             await fetchAndUpdateUserState(pda);
           } catch (error) {
             console.error('Error creating user profile:', error);
-            setTransactionStatus({ 
-              type: 'error', 
-              message: 'Failed to create profile. Please try again.' 
-            });
+            // Check if error is related to insufficient balance
+            if (error.message && (
+              error.message.includes('insufficient lamports') || 
+              error.message.includes('AccountNotFound') ||
+              error.message.includes('0x1')
+            )) {
+              setTransactionStatus({ 
+                type: 'error', 
+                message: 'Insufficient SOL balance. Please add some SOL to your wallet to create a profile.' 
+              });
+            } else {
+              setTransactionStatus({ 
+                type: 'error', 
+                message: 'Failed to create profile. Please try again.' 
+              });
+            }
             return; // Exit early on error
           }
         } else {
@@ -1267,6 +1283,32 @@ const Home = () => {
       
       {/* Main Content */}
       <div className="max-w-4xl mx-auto px-4 py-12">
+        {/* Transaction Status Notification */}
+        {transactionStatus && notificationVisible && (
+          <div 
+            className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg transition-opacity duration-500 ${
+              notificationVisible ? 'opacity-100' : 'opacity-0'
+            } ${
+              transactionStatus.type === 'error' 
+                ? 'bg-red-500/10 border border-red-500/20 text-red-500'
+                : 'bg-green-500/10 border border-green-500/20 text-green-500'
+            }`}
+          >
+            <div className="flex items-center">
+              {transactionStatus.type === 'error' ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              )}
+              <p className="text-sm font-medium">{transactionStatus.message}</p>
+            </div>
+          </div>
+        )}
+
         {/* Loading State */}
         {isUserInitialized === null && (
           <div className="flex flex-col items-center justify-center py-20">
@@ -1278,72 +1320,12 @@ const Home = () => {
         {/* Error State */}
         {isUserInitialized === false && (
           <div className="flex items-center justify-center py-12">
-            <Card className="bg-red-500/10 border border-red-500/20">
-              <CardBody>
-                <p className="text-red-400 text-sm">Failed to initialize your profile. Please try refreshing the page.</p>
-              </CardBody>
-            </Card>
-          </div>
-        )}
-
-        {/* Transaction Status */}
-        {transactionStatus && (
-          <div 
-            className="fixed bottom-8 right-8 max-w-sm w-full z-50"
-            style={{
-              opacity: notificationVisible ? 1 : 0,
-              transform: notificationVisible ? 'translateY(0)' : 'translateY(20px)',
-              transition: 'all 0.5s ease-in-out',
-              pointerEvents: 'none'
-            }}
-          >
-            <Card 
-              className={`
-                ${transactionStatus.type === 'success' ? 'bg-green-500/10 border-green-500/20' :
-                  transactionStatus.type === 'error' ? 'bg-red-500/10 border-red-500/20' :
-                  'bg-blue-500/10 border-blue-500/20'} 
-                border shadow-lg backdrop-blur-sm
-              `}
-            >
-              <CardBody className="py-4 px-5">
-                <div className="flex items-start gap-3"> {/* Changed from items-center to items-start */}
-                  {transactionStatus.type === 'success' ? (
-                    <div className="rounded-full p-2 bg-green-500/20 mt-0.5"> {/* Added mt-0.5 for better alignment */}
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  ) : transactionStatus.type === 'error' ? (
-                    <div className="rounded-full p-2 bg-red-500/20 mt-0.5"> {/* Added mt-0.5 for better alignment */}
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                  ) : (
-                    <div className="rounded-full p-2 bg-blue-500/20 mt-0.5"> {/* Added mt-0.5 for better alignment */}
-                      <svg className="animate-spin h-5 w-5 text-blue-400" viewBox="0 0 24 24">
-                        <path
-                          className="opacity-75"
-                          fill="currentColor"
-                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                        />
-                      </svg>
-                    </div>
-                  )}
-                  <div className="flex-1"> {/* Added wrapper div for text content */}
-                    <p className={`text-sm font-medium ${
-                      transactionStatus.type === 'success' ? 'text-green-400' :
-                      transactionStatus.type === 'error' ? 'text-red-400' :
-                      'text-blue-400'
-                    }`}>
-                      {transactionStatus.message}
-                    </p>
-                    {transactionStatus.type === 'error' && transactionStatus.message.includes('USDC') && (
-                      <p className="text-xs text-gray-400 mt-1">
-                        Need USDC? Visit the faucet to get some test tokens.
-                      </p>
-                    )}
-                  </div>
+            <Card className="bg-blue-500/10 border border-blue-500/20">
+              <CardBody className="flex flex-col items-center gap-4 p-6">
+                <div className="animate-spin rounded-full h-8 w-8 border-2 border-blue-500 border-t-transparent"></div>
+                <div className="text-center">
+                  <p className="text-blue-400 text-sm mb-1">User profile not found. Creating new profile...</p>
+                  <p className="text-gray-400 text-xs">Please sign the transaction in your wallet to continue.</p>
                 </div>
               </CardBody>
             </Card>
@@ -1380,7 +1362,7 @@ const Home = () => {
                             </div>
                             <div className="flex items-center gap-4">
                                 <Button
-                                    className="bg-green-600/50 hover:bg-green-500/50 border border-green-500/50 rounded-xl px-4 py-2"
+                                    className="bg-green-600/50 hover:bg-green-500/50 border border-green-500/50 rounded-xl px-4 py-2 transition-all duration-200 ease-in-out"
                                     onClick={() => setShowDepositModal(true)}
                                     startContent={
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -1391,7 +1373,7 @@ const Home = () => {
                                     Deposit
                                 </Button>
                                 <Button
-                                    className="bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/50 rounded-xl px-4 py-2"
+                                    className="bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/50 rounded-xl px-4 py-2 transition-all duration-200 ease-in-out"
                                     onClick={() => setShowWithdrawUnlockedModal(true)}
                                     startContent={
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -1508,7 +1490,7 @@ const Home = () => {
                           <p className="text-gray-400 mb-4">You're ready to begin! Lock your funds, maintain your streak by completing daily tasks, and earn higher yields on your deposit.</p>
                           <div className="flex gap-4">
                             <Button
-                              className="bg-green-600 hover:bg-green-700 text-white rounded-xl"
+                              className="bg-green-600 hover:bg-green-700 text-white rounded-xl transition-all duration-200 ease-in-out"
                               onClick={() => setShowStartStreakModal(true)}
                               startContent={
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -1671,7 +1653,7 @@ const Home = () => {
                 <div className="fixed bottom-0 left-0 right-0 bg-[#0A0B0D]/95 backdrop-blur-md border-t border-gray-800/50 p-4">
                     <div className="max-w-4xl mx-auto flex gap-4">
                         <Button
-                            className="flex-1 bg-gray-800 hover:bg-gray-700 border border-gray-700 rounded-xl"
+                            className="flex-1 bg-red-900/50 hover:bg-red-800/50 border border-red-700/50 rounded-xl text-red-200 transition-all duration-200 ease-in-out"
                             size="lg"
                             onClick={() => setShowWithdrawModal(true)}
                             disabled={userStateDetails.initialDepositAmount.toNumber() === 0}
@@ -1769,7 +1751,7 @@ const Home = () => {
             </ModalBody>
             <ModalFooter>
               <Button 
-                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl"
+                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl transition-all duration-200 ease-in-out"
                 onClick={() => setShowDepositModal(false)}
               >
                 Cancel
@@ -1779,7 +1761,7 @@ const Home = () => {
                   isLoading 
                     ? 'bg-blue-500 cursor-not-allowed' 
                     : 'bg-blue-500 hover:bg-blue-600'
-                } text-white`}
+                } text-white transition-all duration-200 ease-in-out`}
                 onClick={handleDeposit}
                 disabled={isLoading || !depositAmount || parseFloat(depositAmount) <= 0}
               >
@@ -1884,7 +1866,7 @@ const Home = () => {
                       <Button
                         className={`flex-1 ${selectedRiskLevel === 'low' ? 
                           'bg-blue-500 hover:bg-blue-600' : 
-                          'bg-gray-800/50 hover:bg-gray-700/50'} text-white rounded-xl`}
+                          'bg-gray-800/50 hover:bg-gray-700/50'} text-white rounded-xl transition-all duration-200 ease-in-out`}
                         onClick={() => setSelectedRiskLevel('low')}
                       >
                         Low Risk
@@ -1892,7 +1874,7 @@ const Home = () => {
                       <Button
                         className={`flex-1 ${selectedRiskLevel === 'medium' ? 
                           'bg-amber-500 hover:bg-amber-600' : 
-                          'bg-gray-800/50 hover:bg-gray-700/50'} text-white rounded-xl`}
+                          'bg-gray-800/50 hover:bg-gray-700/50'} text-white rounded-xl transition-all duration-200 ease-in-out`}
                         onClick={() => setSelectedRiskLevel('medium')}
                       >
                         Medium Risk
@@ -1900,7 +1882,7 @@ const Home = () => {
                       <Button
                         className={`flex-1 ${selectedRiskLevel === 'high' ? 
                           'bg-purple-500 hover:bg-purple-600' : 
-                          'bg-gray-800/50 hover:bg-gray-700/50'} text-white rounded-xl`}
+                          'bg-gray-800/50 hover:bg-gray-700/50'} text-white rounded-xl transition-all duration-200 ease-in-out`}
                         onClick={() => setSelectedRiskLevel('high')}
                       >
                         High Risk
@@ -1967,7 +1949,7 @@ const Home = () => {
                     <Button
                       className={`h-[52px] ${lockInDays === '30' ? 
                         'bg-blue-500/20 border-blue-500/30 text-blue-400' : 
-                        'bg-gray-800/50 border-gray-700/50 hover:bg-gray-700/50'} border rounded-xl flex flex-col items-start justify-center px-4`}
+                        'bg-gray-800/50 border-gray-700/50 hover:bg-gray-700/50'} border rounded-xl flex flex-col items-start justify-center px-4 transition-all duration-200 ease-in-out`}
                       onClick={() => setLockInDays('30')}
                     >
                       <div className="font-medium">1 Month</div>
@@ -1976,7 +1958,7 @@ const Home = () => {
                     <Button
                       className={`h-[52px] ${lockInDays === '90' ? 
                         'bg-blue-500/20 border-blue-500/30 text-blue-400' : 
-                        'bg-gray-800/50 border-gray-700/50 hover:bg-gray-700/50'} border rounded-xl flex flex-col items-start justify-center px-4`}
+                        'bg-gray-800/50 border-gray-700/50 hover:bg-gray-700/50'} border rounded-xl flex flex-col items-start justify-center px-4 transition-all duration-200 ease-in-out`}
                       onClick={() => setLockInDays('90')}
                     >
                       <div className="font-medium">3 Months</div>
@@ -1985,7 +1967,7 @@ const Home = () => {
                     <Button
                       className={`h-[52px] ${lockInDays === '180' ? 
                         'bg-blue-500/20 border-blue-500/30 text-blue-400' : 
-                        'bg-gray-800/50 border-gray-700/50 hover:bg-gray-700/50'} border rounded-xl flex flex-col items-start justify-center px-4`}
+                        'bg-gray-800/50 border-gray-700/50 hover:bg-gray-700/50'} border rounded-xl flex flex-col items-start justify-center px-4 transition-all duration-200 ease-in-out`}
                       onClick={() => setLockInDays('180')}
                     >
                       <div className="font-medium">6 Months</div>
@@ -1994,7 +1976,7 @@ const Home = () => {
                     <Button
                       className={`h-[52px] ${lockInDays === '365' ? 
                         'bg-blue-500/20 border-blue-500/30 text-blue-400' : 
-                        'bg-gray-800/50 border-gray-700/50 hover:bg-gray-700/50'} border rounded-xl flex flex-col items-start justify-center px-4`}
+                        'bg-gray-800/50 border-gray-700/50 hover:bg-gray-700/50'} border rounded-xl flex flex-col items-start justify-center px-4 transition-all duration-200 ease-in-out`}
                       onClick={() => setLockInDays('365')}
                     >
                       <div className="font-medium">1 Year</div>
@@ -2051,7 +2033,7 @@ const Home = () => {
             </ModalBody>
             <ModalFooter>
               <Button 
-                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl"
+                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl transition-all duration-200 ease-in-out"
                 onClick={() => setShowStartStreakModal(false)}
               >
                 Cancel
@@ -2061,7 +2043,7 @@ const Home = () => {
                   isLoading 
                     ? 'bg-green-600 cursor-not-allowed' 
                     : 'bg-green-600 hover:bg-green-700'
-                } text-white`}
+                } text-white transition-all duration-200 ease-in-out`}
                 onClick={handleStartCourse}
                 disabled={isLoading || !lockInDays || parseInt(lockInDays) <= 0 || !lockAmount || parseFloat(lockAmount) <= 0}
               >
@@ -2138,7 +2120,7 @@ const Home = () => {
             </ModalBody>
             <ModalFooter>
               <Button 
-                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl"
+                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl transition-all duration-200 ease-in-out"
                 onClick={() => setShowWithdrawModal(false)}
               >
                 Cancel
@@ -2148,7 +2130,7 @@ const Home = () => {
                     isLoading 
                         ? 'bg-blue-500 cursor-not-allowed' 
                         : 'bg-blue-500 hover:bg-blue-600'
-                } text-white`}
+                } text-white transition-all duration-200 ease-in-out`}
                 onClick={handleWithdraw}
                 disabled={isLoading || !userStateDetails || userStateDetails.initialDepositAmount.toNumber() === 0}
               >
@@ -2244,7 +2226,7 @@ const Home = () => {
             </ModalBody>
             <ModalFooter>
               <Button 
-                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl"
+                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl transition-all duration-200 ease-in-out"
                 onClick={() => setShowWithdrawUnlockedModal(false)}
               >
                 Cancel
@@ -2254,7 +2236,7 @@ const Home = () => {
                   isLoading 
                     ? 'bg-blue-500 cursor-not-allowed' 
                     : 'bg-blue-500 hover:bg-blue-600'
-                } text-white`}
+                } text-white transition-all duration-200 ease-in-out`}
                 onClick={handleWithdrawUnlocked}
                 disabled={isLoading || !userStateDetails || (userStateDetails?.depositAmount.toNumber() - userStateDetails?.initialDepositAmount.toNumber()) <= 0}
               >
@@ -2310,8 +2292,25 @@ const Home = () => {
                         <div key={market.publicKey.toBase58()} className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-4">
                           <div className="flex justify-between items-start mb-3">
                             <div>
-                              <p className="text-sm text-gray-400">Market ID</p>
-                              <p className="font-mono">{market.publicKey.toBase58()}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-sm text-gray-400">Market ID</p>
+                                <button
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(market.publicKey.toBase58());
+                                    setTransactionStatus({
+                                      type: 'success',
+                                      message: 'Market ID copied to clipboard'
+                                    });
+                                  }}
+                                  className="p-1 hover:bg-gray-700/50 rounded-md transition-all duration-200 ease-in-out"
+                                >
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-gray-400 hover:text-white" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                                    <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+                                  </svg>
+                                </button>
+                              </div>
+                              <p className="font-mono mt-1">{market.publicKey.toBase58()}</p>
                             </div>
                             <Chip
                               size="sm"
@@ -2361,7 +2360,7 @@ const Home = () => {
             </ModalBody>
             <ModalFooter>
               <Button 
-                className="w-full bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl"
+                className="w-full bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl transition-all duration-200 ease-in-out"
                 onClick={() => setShowStreakDetailsModal(false)}
               >
                 Close
