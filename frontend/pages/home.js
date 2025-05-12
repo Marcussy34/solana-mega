@@ -176,6 +176,44 @@ const Home = () => {
   const [notificationVisible, setNotificationVisible] = useState(false);
   const [lockAmount, setLockAmount] = useState('0.5');
   const [showWithdrawUnlockedModal, setShowWithdrawUnlockedModal] = useState(false);
+  const [selectedRiskLevel, setSelectedRiskLevel] = useState('low'); // Add this near other state declarations
+
+  // Add these strategy configurations near other constants
+  const strategyConfigs = {
+    low: {
+      name: "Conservative Strategy",
+      apy: "2-3% APY",
+      color: "blue",
+      description: "Lower returns with minimal risk exposure. Funds are primarily allocated to established lending protocols with battle-tested security.",
+      allocation: [
+        { name: "Stable Lending", percentage: "80%", color: "blue-500" },
+        { name: "Yield Farms", percentage: "20%", color: "green-500" }
+      ]
+    },
+    medium: {
+      name: "Balanced Strategy",
+      apy: "5-8% APY",
+      color: "amber",
+      description: "Moderate returns with calculated risk exposure. Balanced allocation across established and emerging protocols.",
+      allocation: [
+        { name: "Stable Lending", percentage: "50%", color: "blue-500" },
+        { name: "AMM Pools", percentage: "30%", color: "amber-500" },
+        { name: "Yield Farms", percentage: "20%", color: "green-500" }
+      ]
+    },
+    high: {
+      name: "Aggressive Strategy",
+      apy: "10-15% APY",
+      color: "purple",
+      description: "Higher potential returns with increased risk exposure. Significant allocation to emerging protocols and leveraged positions.",
+      allocation: [
+        { name: "Stable Lending", percentage: "20%", color: "blue-500" },
+        { name: "AMM Pools", percentage: "30%", color: "amber-500" },
+        { name: "Leveraged Yield", percentage: "40%", color: "purple-500" },
+        { name: "New Protocols", percentage: "10%", color: "rose-500" }
+      ]
+    }
+  };
 
   // Add deposit function
   const handleDeposit = async () => {
@@ -1668,21 +1706,21 @@ const Home = () => {
           placement="center"
           classNames={{
             backdrop: "bg-black/60",
-            base: "bg-[#0A0B0D] border border-gray-800/50 shadow-xl text-white rounded-2xl",
-            header: "border-b border-gray-800/50",
-            body: "py-6",
-            footer: "border-t border-gray-800/50"
+            base: "bg-[#0A0B0D] border border-gray-800/50 shadow-xl text-white rounded-2xl w-[480px] max-w-[90vw] max-h-[85vh]",
+            header: "border-b border-gray-800/50 py-3",
+            body: "py-4 overflow-y-auto max-h-[calc(85vh-120px)]",
+            footer: "border-t border-gray-800/50 py-3"
           }}
-          size="sm"
+          size="md"
         >
           <ModalContent>
             <ModalHeader className="flex flex-col gap-1">
-              <h3 className="text-xl font-medium">Start Your Learning Streak</h3>
+              <h3 className="text-lg font-medium">Start Your Learning Streak</h3>
               <p className="text-sm text-gray-400">Choose a lock-in period and amount to begin</p>
             </ModalHeader>
             <ModalBody>
-              <div className="space-y-4">
-                {/* Lock Amount Input - Moved Up */}
+              <div className="space-y-4 px-1">
+                {/* Lock Amount Input - At the very top */}
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Lock Amount (USDC)</label>
                   <Input
@@ -1723,56 +1761,173 @@ const Home = () => {
                   />
                 </div>
 
-                {/* Lock-in Duration - Moved Down */}
-                <div>
-                  <label className="block text-sm text-gray-400 mb-2">Lock-in Duration (Days)</label>
-                  <Input
-                    type="number"
-                    value={lockInDays}
-                    onChange={(e) => setLockInDays(e.target.value)}
-                    min="1"
-                    step="1"
-                    variant="flat"
-                    className="w-full"
-                    endContent={
-                      <div className="flex items-center">
-                        <span className="text-gray-400">days</span>
+                {/* Risk Level & Strategy Section */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="text-sm text-gray-400 mb-3">Risk Level & Strategy</h4>
+                    <div className="flex gap-2 mb-4">
+                      <Button
+                        className={`flex-1 ${selectedRiskLevel === 'low' ? 
+                          'bg-blue-500 hover:bg-blue-600' : 
+                          'bg-gray-800/50 hover:bg-gray-700/50'} text-white rounded-xl`}
+                        onClick={() => setSelectedRiskLevel('low')}
+                      >
+                        Low Risk
+                      </Button>
+                      <Button
+                        className={`flex-1 ${selectedRiskLevel === 'medium' ? 
+                          'bg-amber-500 hover:bg-amber-600' : 
+                          'bg-gray-800/50 hover:bg-gray-700/50'} text-white rounded-xl`}
+                        onClick={() => setSelectedRiskLevel('medium')}
+                      >
+                        Medium Risk
+                      </Button>
+                      <Button
+                        className={`flex-1 ${selectedRiskLevel === 'high' ? 
+                          'bg-purple-500 hover:bg-purple-600' : 
+                          'bg-gray-800/50 hover:bg-gray-700/50'} text-white rounded-xl`}
+                        onClick={() => setSelectedRiskLevel('high')}
+                      >
+                        High Risk
+                      </Button>
+                    </div>
+
+                    {selectedRiskLevel === 'high' && (
+                      <div className="p-3 rounded-xl bg-purple-500/10 border border-purple-500/20 mb-4">
+                        <div className="flex items-center gap-2 text-purple-400">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                          </svg>
+                          <p className="text-xs">
+                            Higher risk exposure significantly increases potential for losses. Only allocate funds you can afford to lose.
+                          </p>
+                        </div>
                       </div>
-                    }
-                    classNames={{
-                      input: [
-                        "text-lg",
-                        "font-medium",
-                        "bg-transparent",
-                      ],
-                      inputWrapper: [
-                        "h-12",
-                        "bg-gray-800/50",
-                        "hover:bg-gray-800",
-                        "group-data-[focused=true]:bg-gray-800",
-                        "!border-0",
-                        "shadow-none",
-                        "rounded-xl"
-                      ]
-                    }}
-                  />
+                    )}
+
+                    <div className={`p-4 rounded-xl ${
+                      selectedRiskLevel === 'low' ? 'bg-blue-500/10 border-blue-500/20' :
+                      selectedRiskLevel === 'medium' ? 'bg-amber-500/10 border-amber-500/20' :
+                      'bg-purple-500/10 border-purple-500/20'
+                    } border`}>
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className={`text-lg ${
+                          selectedRiskLevel === 'low' ? 'text-blue-400' :
+                          selectedRiskLevel === 'medium' ? 'text-amber-400' :
+                          'text-purple-400'
+                        }`}>
+                          {strategyConfigs[selectedRiskLevel].name}
+                        </h3>
+                        <span className={
+                          selectedRiskLevel === 'low' ? 'text-blue-400' :
+                          selectedRiskLevel === 'medium' ? 'text-amber-400' :
+                          'text-purple-400'
+                        }>
+                          {strategyConfigs[selectedRiskLevel].apy}
+                        </span>
+                      </div>
+                      <p className="text-gray-400 text-sm mb-4">
+                        {strategyConfigs[selectedRiskLevel].description}
+                      </p>
+                      
+                      <div className="space-y-2">
+                        <h4 className="text-sm text-gray-400">Asset Allocation</h4>
+                        <div className="flex flex-wrap items-center gap-3">
+                          {strategyConfigs[selectedRiskLevel].allocation.map((asset, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                              <div className={`w-3 h-3 rounded-full bg-${asset.color}`}></div>
+                              <span className="text-sm text-gray-300">{asset.percentage} {asset.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Recommended lock periods */}
-                <div className="space-y-2">
-                  <p className="text-sm text-gray-400">Recommended periods:</p>
+                {/* Lock-in Period Section */}
+                <div className="space-y-4">
+                  <h4 className="text-sm text-gray-400">Lock-in Period</h4>
                   <div className="grid grid-cols-2 gap-2">
-                    {lockPeriods.map((period) => (
-                      <Button
-                        key={period.id}
-                        className={`text-sm py-1 border ${lockInDays === period.label.split(' ')[0] * 30 ? 
-                          'bg-blue-500/20 border-blue-500/30 text-blue-400' : 
-                          'bg-gray-800/50 border-gray-700/50 text-gray-400'}`}
-                        onClick={() => setLockInDays((period.label.split(' ')[0] * 30).toString())}
-                      >
-                        {period.label} <span className="ml-1 text-xs">({period.displayRate})</span>
-                      </Button>
-                    ))}
+                    <Button
+                      className={`p-4 ${lockInDays === '30' ? 
+                        'bg-blue-500/20 border-blue-500/30 text-blue-400' : 
+                        'bg-gray-800/50 border-gray-700/50'} border rounded-xl`}
+                      onClick={() => setLockInDays('30')}
+                    >
+                      <div className="text-left">
+                        <div className="font-medium">1 Month</div>
+                        <div className="text-sm text-gray-400">1%</div>
+                      </div>
+                    </Button>
+                    <Button
+                      className={`p-4 ${lockInDays === '90' ? 
+                        'bg-blue-500/20 border-blue-500/30 text-blue-400' : 
+                        'bg-gray-800/50 border-gray-700/50'} border rounded-xl`}
+                      onClick={() => setLockInDays('90')}
+                    >
+                      <div className="text-left">
+                        <div className="font-medium">3 Months</div>
+                        <div className="text-sm text-gray-400">2%</div>
+                      </div>
+                    </Button>
+                    <Button
+                      className={`p-4 ${lockInDays === '180' ? 
+                        'bg-blue-500/20 border-blue-500/30 text-blue-400' : 
+                        'bg-gray-800/50 border-gray-700/50'} border rounded-xl`}
+                      onClick={() => setLockInDays('180')}
+                    >
+                      <div className="text-left">
+                        <div className="font-medium">6 Months</div>
+                        <div className="text-sm text-gray-400">3.5%</div>
+                      </div>
+                    </Button>
+                    <Button
+                      className={`p-4 ${lockInDays === '365' ? 
+                        'bg-blue-500/20 border-blue-500/30 text-blue-400' : 
+                        'bg-gray-800/50 border-gray-700/50'} border rounded-xl`}
+                      onClick={() => setLockInDays('365')}
+                    >
+                      <div className="text-left">
+                        <div className="font-medium">1 Year</div>
+                        <div className="text-sm text-gray-400">6-8%</div>
+                      </div>
+                    </Button>
+                  </div>
+
+                  {/* Custom Lock-in Period Input */}
+                  <div>
+                    <Input
+                      type="number"
+                      value={lockInDays}
+                      onChange={(e) => setLockInDays(e.target.value)}
+                      min="1"
+                      step="1"
+                      variant="flat"
+                      className="w-full"
+                      placeholder="Custom duration in days"
+                      endContent={
+                        <div className="flex items-center">
+                          <span className="text-gray-400">days</span>
+                        </div>
+                      }
+                      classNames={{
+                        input: [
+                          "text-lg",
+                          "font-medium",
+                          "bg-transparent",
+                        ],
+                        inputWrapper: [
+                          "h-12",
+                          "bg-gray-800/50",
+                          "hover:bg-gray-800",
+                          "group-data-[focused=true]:bg-gray-800",
+                          "!border-0",
+                          "shadow-none",
+                          "rounded-xl"
+                        ]
+                      }}
+                    />
                   </div>
                 </div>
 
