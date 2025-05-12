@@ -1308,52 +1308,6 @@
       ]
     },
     {
-      "name": "record_task",
-      "discriminator": [
-        185,
-        99,
-        227,
-        37,
-        157,
-        81,
-        64,
-        55
-      ],
-      "accounts": [
-        {
-          "name": "user",
-          "writable": true,
-          "signer": true
-        },
-        {
-          "name": "user_state",
-          "writable": true,
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  117,
-                  115,
-                  101,
-                  114
-                ]
-              },
-              {
-                "kind": "account",
-                "path": "user"
-              }
-            ]
-          }
-        },
-        {
-          "name": "system_program",
-          "address": "11111111111111111111111111111111"
-        }
-      ],
-      "args": []
-    },
-    {
       "name": "start_course",
       "discriminator": [
         178,
@@ -1569,6 +1523,10 @@
       "args": [
         {
           "name": "lock_in_duration_days",
+          "type": "u64"
+        },
+        {
+          "name": "lock_amount",
           "type": "u64"
         }
       ]
@@ -1904,6 +1862,48 @@
               }
             ]
           }
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "withdraw_unlocked",
+      "discriminator": [
+        213,
+        161,
+        76,
+        199,
+        38,
+        28,
+        209,
+        80
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
         },
         {
           "name": "user_token_account",
@@ -2168,76 +2168,91 @@
     },
     {
       "code": 6006,
+      "name": "ZeroLockAmount",
+      "msg": "Lock amount cannot be zero."
+    },
+    {
+      "code": 6007,
+      "name": "InsufficientBalance",
+      "msg": "Insufficient balance for requested lock amount."
+    },
+    {
+      "code": 6008,
+      "name": "NoUnlockedBalance",
+      "msg": "No unlocked balance available for withdrawal."
+    },
+    {
+      "code": 6009,
       "name": "MarketNotOpenForBets",
       "msg": "Market is not open for betting."
     },
     {
-      "code": 6007,
+      "code": 6010,
       "name": "BettingWindowClosed",
       "msg": "Betting window for this market has closed."
     },
     {
-      "code": 6008,
+      "code": 6011,
       "name": "ZeroBetAmount",
       "msg": "Bet amount cannot be zero."
     },
     {
-      "code": 6009,
+      "code": 6012,
       "name": "CannotBetOnSelf",
       "msg": "User cannot bet on their own streak."
     },
     {
-      "code": 6010,
+      "code": 6013,
       "name": "MarketNotReadyForResolution",
       "msg": "Market is not ready for resolution."
     },
     {
-      "code": 6011,
+      "code": 6014,
       "name": "ResolutionGracePeriodNotOver",
       "msg": "Resolution grace period for this market is not over yet."
     },
     {
-      "code": 6012,
+      "code": 6015,
       "name": "MarketAlreadyResolved",
       "msg": "Market has already been resolved."
     },
     {
-      "code": 6013,
+      "code": 6016,
       "name": "BetBelongsToAnotherUser",
       "msg": "This bet belongs to another user."
     },
     {
-      "code": 6014,
+      "code": 6017,
       "name": "WinningsAlreadyClaimed",
       "msg": "Winnings for this bet have already been claimed."
     },
     {
-      "code": 6015,
+      "code": 6018,
       "name": "PlatformFeeNotClaimed",
       "msg": "Platform fee has not been claimed yet; market resolution might be incomplete."
     },
     {
-      "code": 6016,
+      "code": 6019,
       "name": "UserStateMismatch",
       "msg": "The UserState account provided does not match the one associated with the market or user."
     },
     {
-      "code": 6017,
+      "code": 6020,
       "name": "UserCourseNotStarted",
       "msg": "The user being bet on has not started their course yet."
     },
     {
-      "code": 6018,
+      "code": 6021,
       "name": "BettingWindowTooLong",
       "msg": "The betting window duration extends beyond or too close to the task deadline."
     },
     {
-      "code": 6019,
+      "code": 6022,
       "name": "MarketBelongsToAnotherUser",
       "msg": "This market belongs to another user."
     },
     {
-      "code": 6020,
+      "code": 6023,
       "name": "CourseNotActive",
       "msg": "Course is not active. Either it hasn't started or has already ended."
     }

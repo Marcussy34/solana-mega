@@ -174,6 +174,8 @@ const Home = () => {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState(null);
   const [notificationVisible, setNotificationVisible] = useState(false);
+  const [lockAmount, setLockAmount] = useState('0.5');
+  const [showWithdrawUnlockedModal, setShowWithdrawUnlockedModal] = useState(false);
 
   // Add deposit function
   const handleDeposit = async () => {
@@ -736,164 +738,174 @@ const Home = () => {
   // Add start course function
   const handleStartCourse = async () => {
     if (!program || !publicKey || !connection || !userStatePDA) {
-      console.error('Error: Prerequisites missing for starting course (program, wallet, connection, user PDA).');
-      return;
+        console.error('Error: Prerequisites missing for starting course (program, wallet, connection, user PDA).');
+        return;
     }
     
     // Basic input validation
     const lockInDaysNum = parseInt(lockInDays, 10);
+    const lockAmountNum = parseFloat(lockAmount);
     if (isNaN(lockInDaysNum) || lockInDaysNum <= 0) {
-      console.error('Error: Invalid lock-in days for starting course.');
-      return;
+        console.error('Error: Invalid lock-in days for starting course.');
+        return;
+    }
+    if (isNaN(lockAmountNum) || lockAmountNum <= 0) {
+        console.error('Error: Invalid lock amount.');
+        return;
     }
 
     setIsLoading(true);
     setTransactionStatus(null);
-    console.log(`Attempting to start course with lock-in of ${lockInDaysNum} days...`);
+    console.log(`Attempting to start course with lock-in of ${lockInDaysNum} days and lock amount of ${lockAmountNum} USDC...`);
 
     try {
-      // First check if user already has an active course
-      const userState = await program.account.userState.fetch(userStatePDA);
-      const currentTime = Math.floor(Date.now() / 1000);
-      const hasActiveCourse = userState.lockInEndTimestamp.toNumber() > currentTime;
+        // First check if user already has an active course
+        const userState = await program.account.userState.fetch(userStatePDA);
+        const currentTime = Math.floor(Date.now() / 1000);
+        const hasActiveCourse = userState.lockInEndTimestamp.toNumber() > currentTime;
 
-      if (hasActiveCourse) {
-        setTransactionStatus({
-          type: 'error',
-          message: 'You already have an active course. Please complete or wait for it to end before starting a new one.'
-        });
-        setIsLoading(false);
-        return;
-      }
+        if (hasActiveCourse) {
+            setTransactionStatus({
+                type: 'error',
+                message: 'You already have an active course. Please complete or wait for it to end before starting a new one.'
+            });
+            setIsLoading(false);
+            return;
+        }
 
-      // --- 1. Prepare Instruction Arguments ---
-      const lockInDaysBN = new BN(lockInDaysNum);
-      console.log(`Start Course Lock-in Days (BN): ${lockInDaysBN.toString()}`);
+        // Convert lock amount to lamports (USDC has 6 decimals)
+        const lockAmountLamports = new BN(lockAmountNum * 1_000_000);
 
-      // --- 2. Derive PDAs for Market Creation ---
-      console.log("Deriving PDAs for market creation...");
-      
-      // Market State PDA - using correct seeds from IDL
-      const [marketStatePDA] = PublicKey.findProgramAddressSync(
-        [MARKET_SEED, publicKey.toBuffer(), userStatePDA.toBuffer()],
-        program.programId
-      );
-      console.log(`Market State PDA: ${marketStatePDA.toBase58()}`);
+        // --- 1. Prepare Instruction Arguments ---
+        const lockInDaysBN = new BN(lockInDaysNum);
+        console.log(`Start Course Lock-in Days (BN): ${lockInDaysBN.toString()}`);
+        console.log(`Lock Amount (Lamports): ${lockAmountLamports.toString()}`);
 
-      // Market Escrow Vault PDA
-      const [marketEscrowVaultPDA] = PublicKey.findProgramAddressSync(
-        [MARKET_ESCROW_VAULT_SEED, marketStatePDA.toBuffer()],
-        program.programId
-      );
-      console.log(`Market Escrow Vault PDA: ${marketEscrowVaultPDA.toBase58()}`);
-
-      // Market Escrow Token Account ATA
-      const marketEscrowTokenAccount = getAssociatedTokenAddressSync(
-        USDC_MINT,
-        marketEscrowVaultPDA,
-        true
-      );
-      console.log(`Market Escrow Token Account: ${marketEscrowTokenAccount.toBase58()}`);
-
-      // User's USDC ATA
-      const userUsdcAta = getAssociatedTokenAddressSync(USDC_MINT, publicKey);
-      console.log(`User USDC ATA: ${userUsdcAta.toBase58()}`);
-
-      // --- 3. Build the start_course instruction transaction ---
-      console.log("Building start_course transaction...");
-      const startCourseTx = await program.methods
-        .startCourse(lockInDaysBN)
-        .accounts({
-          user: publicKey,
-          userState: userStatePDA,
-          userTokenAccount: userUsdcAta,
-          marketState: marketStatePDA,
-          marketEscrowVault: marketEscrowVaultPDA,
-          marketEscrowTokenAccount: marketEscrowTokenAccount,
-          usdcMint: USDC_MINT,
-          systemProgram: SystemProgram.programId,
-          tokenProgram: TOKEN_PROGRAM_ID,
-          associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
-          rent: web3.SYSVAR_RENT_PUBKEY,
-        })
-        .transaction();
-
-      // --- 4. Set Fee Payer and Recent Blockhash ---
-      startCourseTx.feePayer = publicKey;
-      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-      startCourseTx.recentBlockhash = blockhash;
-
-      // --- 5. Simulate Transaction ---
-      console.log('Simulating transaction...');
-      try {
-        const simulationResult = await connection.simulateTransaction(startCourseTx);
+        // --- 2. Derive PDAs for Market Creation ---
+        console.log("Deriving PDAs for market creation...");
         
-        if (simulationResult.value.err) {
-          console.error("Simulation Error:", simulationResult.value.err);
-          if (simulationResult.value.logs) {
-            console.log("Simulation Logs:", simulationResult.value.logs);
-            // Check if the error is related to the market state account
-            if (simulationResult.value.logs.some(log => log.includes('already in use'))) {
-              throw new Error('Market state account already exists. Please try again in a moment.');
+        // Market State PDA - using correct seeds from IDL
+        const [marketStatePDA] = PublicKey.findProgramAddressSync(
+          [MARKET_SEED, publicKey.toBuffer(), userStatePDA.toBuffer()],
+          program.programId
+        );
+        console.log(`Market State PDA: ${marketStatePDA.toBase58()}`);
+
+        // Market Escrow Vault PDA
+        const [marketEscrowVaultPDA] = PublicKey.findProgramAddressSync(
+          [MARKET_ESCROW_VAULT_SEED, marketStatePDA.toBuffer()],
+          program.programId
+        );
+        console.log(`Market Escrow Vault PDA: ${marketEscrowVaultPDA.toBase58()}`);
+
+        // Market Escrow Token Account ATA
+        const marketEscrowTokenAccount = getAssociatedTokenAddressSync(
+          USDC_MINT,
+          marketEscrowVaultPDA,
+          true
+        );
+        console.log(`Market Escrow Token Account: ${marketEscrowTokenAccount.toBase58()}`);
+
+        // User's USDC ATA
+        const userUsdcAta = getAssociatedTokenAddressSync(USDC_MINT, publicKey);
+        console.log(`User USDC ATA: ${userUsdcAta.toBase58()}`);
+
+        // --- 3. Build the start_course instruction transaction ---
+        console.log("Building start_course transaction...");
+        const startCourseTx = await program.methods
+            .startCourse(lockInDaysBN, lockAmountLamports)
+            .accounts({
+                user: publicKey,
+                userState: userStatePDA,
+                userTokenAccount: userUsdcAta,
+                marketState: marketStatePDA,
+                marketEscrowVault: marketEscrowVaultPDA,
+                marketEscrowTokenAccount: marketEscrowTokenAccount,
+                usdcMint: USDC_MINT,
+                systemProgram: SystemProgram.programId,
+                tokenProgram: TOKEN_PROGRAM_ID,
+                associatedTokenProgram: ASSOCIATED_TOKEN_PROGRAM_ID,
+                rent: web3.SYSVAR_RENT_PUBKEY,
+            })
+            .transaction();
+
+        // --- 4. Set Fee Payer and Recent Blockhash ---
+        startCourseTx.feePayer = publicKey;
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+        startCourseTx.recentBlockhash = blockhash;
+
+        // --- 5. Simulate Transaction ---
+        console.log('Simulating transaction...');
+        try {
+            const simulationResult = await connection.simulateTransaction(startCourseTx);
+            
+            if (simulationResult.value.err) {
+                console.error("Simulation Error:", simulationResult.value.err);
+                if (simulationResult.value.logs) {
+                    console.log("Simulation Logs:", simulationResult.value.logs);
+                    // Check if the error is related to the market state account
+                    if (simulationResult.value.logs.some(log => log.includes('already in use'))) {
+                        throw new Error('Market state account already exists. Please try again in a moment.');
+                    }
+                }
+                throw new Error(`Transaction simulation failed: ${JSON.stringify(simulationResult.value.err)}`);
             }
-          }
-          throw new Error(`Transaction simulation failed: ${JSON.stringify(simulationResult.value.err)}`);
+            console.log("Transaction simulation successful.");
+            
+            // Log all accounts for debugging
+            console.log("Transaction accounts:", startCourseTx.instructions[0].keys.map(k => ({
+                pubkey: k.pubkey.toBase58(),
+                isSigner: k.isSigner,
+                isWritable: k.isWritable
+            })));
+        } catch (simError) {
+            console.error("Error during simulation:", simError);
+            if (simError.logs) {
+                console.log("Simulation Logs:", simError.logs);
+            }
+            throw simError;
         }
-        console.log("Transaction simulation successful.");
+
+        // --- 6. Send Transaction ---
+        console.log('Sending transaction...');
+        const startCourseSig = await sendTransaction(startCourseTx, connection);
+        console.log('Transaction sent:', startCourseSig);
+
+        // --- 7. Confirm Transaction ---
+        console.log('Confirming transaction...');
+        const confirmation = await connection.confirmTransaction({
+            signature: startCourseSig,
+            blockhash,
+            lastValidBlockHeight
+        }, 'confirmed');
+
+        if (confirmation.value.err) {
+            throw new Error(`Transaction failed: ${confirmation.value.err}`);
+        }
+
+        console.log('Transaction confirmed successfully.');
         
-        // Log all accounts for debugging
-        console.log("Transaction accounts:", startCourseTx.instructions[0].keys.map(k => ({
-          pubkey: k.pubkey.toBase58(),
-          isSigner: k.isSigner,
-          isWritable: k.isWritable
-        })));
-      } catch (simError) {
-        console.error("Error during simulation:", simError);
-        if (simError.logs) {
-          console.log("Simulation Logs:", simError.logs);
-        }
-        throw simError;
-      }
-
-      // --- 6. Send Transaction ---
-      console.log('Sending transaction...');
-      const startCourseSig = await sendTransaction(startCourseTx, connection);
-      console.log('Transaction sent:', startCourseSig);
-
-      // --- 7. Confirm Transaction ---
-      console.log('Confirming transaction...');
-      const confirmation = await connection.confirmTransaction({
-        signature: startCourseSig,
-        blockhash,
-        lastValidBlockHeight
-      }, 'confirmed');
-
-      if (confirmation.value.err) {
-        throw new Error(`Transaction failed: ${confirmation.value.err}`);
-      }
-
-      console.log('Transaction confirmed successfully.');
-      
-      // Close modal and update state
-      setShowStartStreakModal(false);
-      setLockInDays('30');
-      await fetchAndUpdateUserState();
-      
-      setTransactionStatus({
-        type: 'success',
-        message: `Successfully started course with ${lockInDays} day lock-in`
-      });
-      
+        // Close modal and update state
+        setShowStartStreakModal(false);
+        setLockInDays('30');
+        setLockAmount('0.5'); // Reset lock amount
+        await fetchAndUpdateUserState();
+        
+        setTransactionStatus({
+            type: 'success',
+            message: `Successfully started course with ${lockInDays} day lock-in and ${lockAmount} USDC locked`
+        });
+        
     } catch (error) {
-      console.error('Error during start_course:', error);
-      setTransactionStatus({
-        type: 'error',
-        message: `Failed to start course: ${error.message}`
-      });
+        console.error('Error during start_course:', error);
+        setTransactionStatus({
+            type: 'error',
+            message: `Failed to start course: ${error.message}`
+        });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
     }
-  };
+};
 
   // Early return for client-side rendering
   if (!mounted) return null;
@@ -968,6 +980,111 @@ const Home = () => {
       return { label: 'Penalty Mode', color: 'danger' };
     }
   };
+
+  // Add withdraw unlocked function
+  const handleWithdrawUnlocked = async () => {
+    if (!program || !publicKey || !connection || !userStatePDA) {
+        console.error('Error: Prerequisites missing for withdraw unlocked (program, wallet, connection, user PDA).');
+        return;
+    }
+
+    setIsLoading(true);
+    setTransactionStatus(null);
+    console.log('Attempting to withdraw unlocked funds...');
+
+    try {
+        // --- 1. Derive Accounts ---
+        console.log('Deriving necessary accounts for withdraw unlocked...');
+        const [vaultPDA] = PublicKey.findProgramAddressSync(
+            [VAULT_SEED],
+            program.programId
+        );
+        console.log(`Vault Authority PDA: ${vaultPDA.toBase58()}`);
+
+        const userUsdcAta = getAssociatedTokenAddressSync(USDC_MINT, publicKey);
+        console.log(`User USDC ATA: ${userUsdcAta.toBase58()}`);
+
+        const vaultUsdcAta = getAssociatedTokenAddressSync(USDC_MINT, vaultPDA, true);
+        console.log(`Vault USDC ATA: ${vaultUsdcAta.toBase58()}`);
+
+        // --- 2. Build withdraw_unlocked instruction ---
+        console.log('Building withdraw_unlocked transaction...');
+        const withdrawUnlockedTx = await program.methods
+            .withdrawUnlocked()
+            .accounts({
+                user: publicKey,
+                userState: userStatePDA,
+                userTokenAccount: userUsdcAta,
+                vault: vaultPDA,
+                vaultTokenAccount: vaultUsdcAta,
+                usdcMint: USDC_MINT,
+                tokenProgram: TOKEN_PROGRAM_ID,
+            })
+            .transaction();
+
+        // --- 3. Set Fee Payer and Simulate ---
+        withdrawUnlockedTx.feePayer = publicKey;
+        console.log('Simulating withdraw_unlocked transaction...');
+        try {
+            const simulationResult = await connection.simulateTransaction(withdrawUnlockedTx);
+            if (simulationResult.value.err) {
+                console.error('Simulation Error:', simulationResult.value.err);
+                console.log('Simulation Logs:', simulationResult.value.logs);
+                throw new Error(`Transaction simulation failed: ${simulationResult.value.err}`);
+            }
+            console.log('Transaction simulation successful.');
+        } catch (simError) {
+            console.error('Error during simulation:', simError);
+            if (simError.logs) {
+                console.log('Simulation Logs:', simError.logs);
+            }
+            setTransactionStatus({
+                type: 'error',
+                message: 'Transaction simulation failed'
+            });
+            setIsLoading(false);
+            return;
+        }
+
+        // --- 4. Send Transaction ---
+        console.log('Sending withdraw_unlocked transaction...');
+        const withdrawSig = await sendTransaction(withdrawUnlockedTx, connection);
+        console.log('Transaction sent:', withdrawSig);
+
+        // --- 5. Confirm Transaction ---
+        console.log('Confirming transaction...');
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+        const confirmation = await connection.confirmTransaction({
+            signature: withdrawSig,
+            blockhash,
+            lastValidBlockHeight
+        }, 'confirmed');
+
+        if (confirmation.value.err) {
+            throw new Error(`Transaction failed: ${confirmation.value.err}`);
+        }
+
+        console.log('Transaction confirmed successfully.');
+        
+        // Close modal and update state
+        setShowWithdrawUnlockedModal(false);
+        await fetchAndUpdateUserState();
+        
+        setTransactionStatus({
+            type: 'success',
+            message: 'Successfully withdrawn unlocked funds to wallet'
+        });
+        
+    } catch (error) {
+        console.error('Error during withdraw unlocked:', error);
+        setTransactionStatus({
+            type: 'error',
+            message: `Failed to withdraw: ${error.message}`
+        });
+    } finally {
+        setIsLoading(false);
+    }
+};
 
   return (
     <div className="min-h-screen bg-[#0A0B0D] text-white font-inter">
@@ -1099,67 +1216,80 @@ const Home = () => {
           <div className="space-y-6">
             {/* Main Balance Card */}
             <Card className="bg-gradient-to-b from-gray-800/50 to-gray-900/50 border border-gray-700/50 shadow-xl overflow-hidden rounded-2xl">
-              <CardBody className="p-8">
-                <div className="space-y-8">
-                  {/* Balance Header */}
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-2xl font-medium">Your Balance</h2>
-                      <Tooltip
-                        content={
-                          <div className="max-w-xs p-2">
-                            <p className="text-sm">
-                              This is your learning account balance. When starting a streak, you can choose how much to lock from this account.
-                            </p>
-                          </div>
-                        }
-                        placement="right"
-                      >
-                        <div className="cursor-help">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                          </svg>
+                <CardBody className="p-8">
+                    <div className="space-y-8">
+                        {/* Balance Header */}
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <h2 className="text-2xl font-medium">Your Balance</h2>
+                                <Tooltip
+                                    content={
+                                        <div className="max-w-xs p-2">
+                                            <p className="text-sm">
+                                                This is your learning account balance. When starting a streak, you can choose how much to lock from this account.
+                                            </p>
+                                        </div>
+                                    }
+                                    placement="right"
+                                >
+                                    <div className="cursor-help">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                                        </svg>
+                                    </div>
+                                </Tooltip>
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <Button
+                                    className="bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/50 rounded-xl px-4 py-2"
+                                    onClick={() => setShowWithdrawUnlockedModal(true)}
+                                    startContent={
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                            <path fillRule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                                        </svg>
+                                    }
+                                >
+                                    Withdraw
+                                </Button>
+                                <Chip
+                                    className={`${userStateDetails.depositAmount.toNumber() > 0 ? 
+                                        'bg-green-500/10 border-green-500/20 text-green-400' : 
+                                        'bg-gray-500/10 border-gray-500/20 text-gray-400'
+                                    } border`}
+                                    size="sm"
+                                >
+                                    {userStateDetails.depositAmount.toNumber() > 0 ? "Active" : "Inactive"}
+                                </Chip>
+                            </div>
                         </div>
-                      </Tooltip>
-                    </div>
-                    <Chip
-                      className={`${userStateDetails.depositAmount.toNumber() > 0 ? 
-                        'bg-green-500/10 border-green-500/20 text-green-400' : 
-                        'bg-gray-500/10 border-gray-500/20 text-gray-400'
-                      } border`}
-                      size="sm"
-                    >
-                      {userStateDetails.depositAmount.toNumber() > 0 ? "Active" : "Inactive"}
-                    </Chip>
-                  </div>
 
-                  {/* Balance Amount */}
-                  <div>
-                    <div className="flex items-baseline gap-2">
-                      <span className="text-4xl font-medium tracking-tight">
-                        {((userStateDetails.depositAmount.toNumber() - userStateDetails.initialDepositAmount.toNumber()) / 1_000_000).toFixed(2)}
-                      </span>
-                      <span className="text-gray-400">USDC</span>
+                        {/* Balance Amount */}
+                        <div>
+                            <div className="flex items-baseline gap-2">
+                                <span className="text-4xl font-medium tracking-tight">
+                                    {((userStateDetails.depositAmount.toNumber() - userStateDetails.initialDepositAmount.toNumber()) / 1_000_000).toFixed(2)}
+                                </span>
+                                <span className="text-gray-400">USDC</span>
+                            </div>
+                            <div className="mt-4 grid grid-cols-2 gap-8">
+                                <div>
+                                    <p className="text-sm text-gray-400 mb-1">Locked Amount</p>
+                                    <p className="text-lg font-medium">
+                                        {(userStateDetails.initialDepositAmount.toNumber() / 1_000_000).toFixed(2)}
+                                        <span className="text-sm text-gray-400 ml-1">USDC</span>
+                                    </p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-400 mb-1">Accrued Yield</p>
+                                    <p className="text-lg font-medium text-green-400">
+                                        +{(userStateDetails.accruedYield.toNumber() / 1_000_000).toFixed(4)}
+                                        <span className="text-sm text-gray-400 ml-1">USDC</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div className="mt-4 grid grid-cols-2 gap-8">
-                      <div>
-                        <p className="text-sm text-gray-400 mb-1">Locked Amount</p>
-                        <p className="text-lg font-medium">
-                          {(userStateDetails.initialDepositAmount.toNumber() / 1_000_000).toFixed(2)}
-                          <span className="text-sm text-gray-400 ml-1">USDC</span>
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-sm text-gray-400 mb-1">Accrued Yield</p>
-                        <p className="text-lg font-medium text-green-400">
-                          +{(userStateDetails.accruedYield.toNumber() / 1_000_000).toFixed(4)}
-                          <span className="text-sm text-gray-400 ml-1">USDC</span>
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </CardBody>
+                </CardBody>
             </Card>
 
             {/* Get Started Section - Only show when no deposits */}
@@ -1530,7 +1660,7 @@ const Home = () => {
           <ModalContent>
             <ModalHeader className="flex flex-col gap-1">
               <h3 className="text-xl font-medium">Start Your Learning Streak</h3>
-              <p className="text-sm text-gray-400">Choose a lock-in period to begin</p>
+              <p className="text-sm text-gray-400">Choose a lock-in period and amount to begin</p>
             </ModalHeader>
             <ModalBody>
               <div className="space-y-4">
@@ -1554,6 +1684,47 @@ const Home = () => {
                         "text-lg",
                         "font-medium",
                         "bg-transparent",
+                      ],
+                      inputWrapper: [
+                        "h-12",
+                        "bg-gray-800/50",
+                        "hover:bg-gray-800",
+                        "group-data-[focused=true]:bg-gray-800",
+                        "!border-0",
+                        "shadow-none",
+                        "rounded-xl"
+                      ]
+                    }}
+                  />
+                </div>
+
+                {/* Add Lock Amount Input */}
+                <div>
+                  <label className="block text-sm text-gray-400 mb-2">Lock Amount (USDC)</label>
+                  <Input
+                    type="number"
+                    value={lockAmount}
+                    onChange={(e) => setLockAmount(e.target.value)}
+                    min="0.1"
+                    step="0.1"
+                    variant="flat"
+                    className="w-full"
+                    startContent={
+                      <div className="pointer-events-none flex items-center">
+                        <span className="text-gray-400">$</span>
+                      </div>
+                    }
+                    endContent={
+                      <div className="flex items-center">
+                        <span className="text-gray-400">USDC</span>
+                      </div>
+                    }
+                    classNames={{
+                      input: [
+                        "text-lg",
+                        "font-medium",
+                        "bg-transparent",
+                        "pl-1"
                       ],
                       inputWrapper: [
                         "h-12",
@@ -1592,7 +1763,7 @@ const Home = () => {
                       <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                     </svg>
                     <p className="text-xs text-gray-400">
-                      Funds will be locked for the duration of your learning streak. Complete daily tasks to earn yield.
+                      The specified amount will be locked for the duration of your learning streak. Complete daily tasks to earn yield.
                     </p>
                   </div>
                 </div>
@@ -1612,7 +1783,7 @@ const Home = () => {
                     : 'bg-green-600 hover:bg-green-700'
                 } text-white`}
                 onClick={handleStartCourse}
-                disabled={isLoading || !lockInDays || parseInt(lockInDays) <= 0}
+                disabled={isLoading || !lockInDays || parseInt(lockInDays) <= 0 || !lockAmount || parseFloat(lockAmount) <= 0}
               >
                 {isLoading ? (
                   <>
@@ -1715,6 +1886,96 @@ const Home = () => {
                   </>
                 ) : (
                   'Confirm Withdrawal'
+                )}
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+
+        {/* Add Withdraw Unlocked Modal */}
+        <Modal 
+          isOpen={showWithdrawUnlockedModal} 
+          onClose={() => setShowWithdrawUnlockedModal(false)}
+          backdrop="blur"
+          placement="center"
+          classNames={{
+            backdrop: "bg-black/60",
+            base: "bg-[#0A0B0D] border border-gray-800/50 shadow-xl text-white rounded-2xl",
+            header: "border-b border-gray-800/50",
+            body: "py-6",
+            footer: "border-t border-gray-800/50"
+          }}
+          size="sm"
+        >
+          <ModalContent>
+            <ModalHeader className="flex flex-col gap-1">
+              <h3 className="text-xl font-medium">Withdraw Unlocked Balance</h3>
+              <p className="text-sm text-gray-400">Withdraw your available unlocked funds</p>
+            </ModalHeader>
+            <ModalBody>
+              {userStateDetails ? (
+                <div className="space-y-4">
+                    <div className="p-4 rounded-xl bg-gray-800/50">
+                        <div className="flex justify-between mb-2">
+                            <span className="text-gray-400">Total Balance:</span>
+                            <span className="font-medium">
+                                {(userStateDetails.depositAmount.toNumber() / 1_000_000).toFixed(4)} USDC
+                            </span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-400">Unlocked Amount:</span>
+                            <span className="font-medium">
+                                {((userStateDetails.depositAmount.toNumber() - userStateDetails.initialDepositAmount.toNumber()) / 1_000_000).toFixed(4)} USDC
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                        <div className="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-400 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                            </svg>
+                            <p className="text-xs text-blue-400">
+                                This will withdraw all your unlocked balance to your wallet. Locked funds will remain in the program.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            ) : (
+                <div className="p-4 text-center text-gray-400">
+                    Loading balance information...
+                </div>
+            )}
+            </ModalBody>
+            <ModalFooter>
+              <Button 
+                className="flex-1 bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl"
+                onClick={() => setShowWithdrawUnlockedModal(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                className={`flex-1 rounded-xl flex items-center justify-center gap-2 ${
+                    isLoading 
+                        ? 'bg-blue-500 cursor-not-allowed' 
+                        : 'bg-blue-500 hover:bg-blue-600'
+                } text-white`}
+                onClick={handleWithdrawUnlocked}
+                disabled={isLoading || !userStateDetails || (userStateDetails?.depositAmount.toNumber() - userStateDetails?.initialDepositAmount.toNumber()) <= 0}
+              >
+                {isLoading ? (
+                    <>
+                        <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                            <path
+                                className="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            />
+                        </svg>
+                        <span>Processing...</span>
+                    </>
+                ) : (
+                    'Confirm Withdrawal'
                 )}
               </Button>
             </ModalFooter>
