@@ -2,6 +2,29 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Add custom font face for Dimis */
+@font-face {
+  font-family: 'Dimis';
+  src: url('/font/DIMIS___.TTF') format('truetype');
+  font-weight: normal; /* Adjust if the font has specific weights */
+  font-style: normal;  /* Adjust if the font has specific styles */
+}
+
+/* Add custom font face for Dash Horizon */
+@font-face {
+  font-family: 'DashHorizon'; /* You can choose any name */
+  src: url('/font/Dash-Horizon-Demo.otf') format('opentype'); /* .otf is opentype */
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Thunder'; /* You can choose any name */
+  src: url('/font/Thunder-BoldHC.ttf') format('truetype'); /* .otf is opentype */
+  font-weight: normal;
+  font-style: normal;
+}
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

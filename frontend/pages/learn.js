@@ -38,7 +38,7 @@ const learnPageSubjects = [
 const LearnPage = () => {
   // Example sidebar links - replace with your actual links
   const links = [
-    { label: "Courses", href: "/courses", icon: <IconClipboardCheck size={20} /> },
+    { label: "Dashboard", href: "/home", icon: <IconClipboardCheck size={20} /> },
     { label: "Leaderboard", href: "/leaderboard", icon: <IconAward size={20} /> },
   ];
 

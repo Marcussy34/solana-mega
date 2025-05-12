@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+const { fontFamily } = require('tailwindcss/defaultTheme');
+
 module.exports = {
     darkMode: ['class'],
     content: [
@@ -62,7 +64,11 @@ module.exports = {
   				'4': 'hsl(var(--chart-4))',
   				'5': 'hsl(var(--chart-5))'
   			}
-  		}
+  		},
+      fontFamily: {
+        dimis: ['Dimis', ...fontFamily.sans],
+        dashhorizon: ['DashHorizon', ...fontFamily.sans],
+      },
   	}
   },
   plugins: [require('@heroui/theme/plugin'), require("tailwindcss-animate")],

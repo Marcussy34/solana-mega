@@ -459,19 +459,41 @@ export default function LandingPage() {
         </Navbar>
 
         {/* Hero Section */}
-        <section className="relative min-h-screen flex items-center pt-20">
+        <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
+          {/* Background Video */}
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline // Important for iOS Safari
+            className="absolute z-0 w-auto min-w-full min-h-full max-w-none object-cover" // Tailwind classes for full cover
+            style={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover',
+              transform: 'translate(-50%, -50%)',
+              zIndex: 0, // Ensure it's behind other content
+            }}
+          >
+            <source src="/" type="video/mp4" />
+            Your browser does not support the video tag.
+          </video>
+
           {/* 3D Marquee Background */}
-          <div className="absolute inset-0 z-0 opacity-15 overflow-hidden">
+          <div className="absolute inset-0 z-1 opacity-15 overflow-hidden">
             <ThreeDMarquee images={images} />
           </div>
           
           {/* Content */}
           <div className="relative z-10 container mx-auto px-4 text-left">
             <div className="max-w-2xl">
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 text-[#E0E1DD]">
+              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 text-[#E0E1DD] font-dashhorizon">
                 LockedIn
               </h1>
-              <p className="text-xl md:text-2xl mb-8 text-[#778DA9]">
+              <p className="text-xl md:text-2xl mb-8 text-[#778DA9] font-thunder">
                 Learn, Earn & Build Habits on Solana. Master new skills while earning yield on your capital.
               </p>
             </div>
