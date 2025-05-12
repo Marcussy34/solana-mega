@@ -1735,6 +1735,17 @@ const Home = () => {
           }}
           size="md"
         >
+          <style jsx global>{`
+            /* Hide number input spinners */
+            input[type=number]::-webkit-inner-spin-button,
+            input[type=number]::-webkit-outer-spin-button {
+              -webkit-appearance: none;
+              margin: 0;
+            }
+            input[type=number] {
+              -moz-appearance: textfield;
+            }
+          `}</style>
           <ModalContent>
             <ModalHeader className="flex flex-col gap-1">
               <h3 className="text-lg font-medium">Start Your Learning Streak</h3>
@@ -1928,6 +1939,7 @@ const Home = () => {
                           "text-lg",
                           "font-medium",
                           "bg-transparent",
+                          "text-center" // Center the text
                         ],
                         inputWrapper: [
                           "h-12",
