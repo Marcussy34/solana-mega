@@ -174,7 +174,7 @@ const Home = () => {
   const [showWithdrawModal, setShowWithdrawModal] = useState(false);
   const [transactionStatus, setTransactionStatus] = useState(null);
   const [notificationVisible, setNotificationVisible] = useState(false);
-  const [lockAmount, setLockAmount] = useState('0.5');
+  const [lockAmount, setLockAmount] = useState('1');
   const [showWithdrawUnlockedModal, setShowWithdrawUnlockedModal] = useState(false);
   const [selectedRiskLevel, setSelectedRiskLevel] = useState('low');
 
@@ -1639,11 +1639,11 @@ const Home = () => {
                       type="number"
                       value={depositAmount}
                       onChange={(e) => setDepositAmount(e.target.value)}
-                      min="0"
-                      step="0.1"
+                      min="0.000001"
+                      step="0.000001"
                       placeholder="0.00"
                       variant="flat"
-                      className="w-full"
+                      className="w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                       startContent={
                         <div className="pointer-events-none flex items-center">
                           <span className="text-gray-400">$</span>
@@ -1659,7 +1659,10 @@ const Home = () => {
                           "text-lg",
                           "font-medium",
                           "bg-transparent",
-                          "pl-1"
+                          "pl-1",
+                          "[appearance:textfield]",
+                          "[&::-webkit-outer-spin-button]:appearance-none",
+                          "[&::-webkit-inner-spin-button]:appearance-none"
                         ],
                         inputWrapper: [
                           "h-12",
