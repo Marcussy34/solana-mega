@@ -177,6 +177,8 @@ const Home = () => {
   const [lockAmount, setLockAmount] = useState('1');
   const [showWithdrawUnlockedModal, setShowWithdrawUnlockedModal] = useState(false);
   const [selectedRiskLevel, setSelectedRiskLevel] = useState('low');
+  const [showStreakDetailsModal, setShowStreakDetailsModal] = useState(false);
+  const [userMarkets, setUserMarkets] = useState([]);
 
   // Add these strategy configurations near other constants
   const strategyConfigs = {
@@ -236,6 +238,41 @@ const Home = () => {
       '365': '15-20%'
     }
   };
+
+  // Add fetchUserMarkets function
+  const fetchUserMarkets = async () => {
+    if (!program || !publicKey) return;
+    
+    try {
+      // Get all markets where userBeingBetOn is the current user
+      const allMarketAccounts = await program.account.marketState.all([
+        {
+          memcmp: {
+            offset: 8, // Adjust this offset based on your account structure
+            bytes: publicKey.toBase58(),
+          },
+        },
+      ]);
+
+      setUserMarkets(allMarketAccounts.map(m => ({
+        publicKey: m.publicKey,
+        ...m.account
+      })));
+    } catch (error) {
+      console.error("Error fetching user markets:", error);
+      setTransactionStatus({
+        type: 'error',
+        message: 'Failed to fetch market details'
+      });
+    }
+  };
+
+  // Add useEffect to fetch markets when needed
+  useEffect(() => {
+    if (program && publicKey) {
+      fetchUserMarkets();
+    }
+  }, [program, publicKey]);
 
   // Add deposit function
   const handleDeposit = async () => {
@@ -1159,15 +1196,57 @@ const Home = () => {
         </NavbarBrand>
         <NavbarContent justify="end">
           <NavbarItem>
-            <Tooltip content={publicKey?.toBase58()}>
-              <Chip
-                className="bg-gray-800/50 border border-gray-700"
+            <div className="relative group">
+              <Button 
+                className="bg-gray-800/50 border border-gray-700 hover:bg-gray-700/50"
                 size="sm"
                 variant="flat"
               >
-                {publicKey?.toBase58().slice(0, 4)}...{publicKey?.toBase58().slice(-4)}
-              </Chip>
-            </Tooltip>
+                <div className="flex items-center gap-2">
+                  <span>{publicKey?.toBase58().slice(0, 4)}...{publicKey?.toBase58().slice(-4)}</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 transition-transform group-hover:rotate-180" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </div>
+              </Button>
+              <div className="absolute right-0 mt-2 w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 z-50">
+                <div className="bg-[#1A1B1E] border border-gray-700/50 rounded-lg shadow-xl overflow-hidden">
+                  {/* Wallet Address */}
+                  <div 
+                    onClick={() => {
+                      navigator.clipboard.writeText(publicKey?.toBase58());
+                      setTransactionStatus({
+                        type: 'success',
+                        message: 'Wallet address copied to clipboard'
+                      });
+                    }}
+                    className="px-4 py-2 hover:bg-gray-700/30 cursor-pointer"
+                  >
+                    <div className="text-sm truncate">{publicKey?.toBase58()}</div>
+                    <div className="text-xs text-gray-500">Click to copy</div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="h-[1px] bg-gray-700/50"></div>
+
+                  {/* Your Streak */}
+                  <div 
+                    className="px-4 py-2 hover:bg-gray-700/30 cursor-pointer"
+                    onClick={() => {
+                      setShowStreakDetailsModal(true);
+                      fetchUserMarkets(); // Refresh markets when opening modal
+                    }}
+                  >
+                    <span className="text-sm">Your Streak</span>
+                  </div>
+
+                  {/* Settings */}
+                  <div className="px-4 py-2 hover:bg-gray-700/30 cursor-pointer">
+                    <span className="text-sm">Settings</span>
+                  </div>
+                </div>
+              </div>
+            </div>
           </NavbarItem>
           <NavbarItem>
             <Button 
@@ -2193,6 +2272,99 @@ const Home = () => {
                 ) : (
                   'Confirm Withdrawal'
                 )}
+              </Button>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+
+        {/* Add Streak Details Modal */}
+        <Modal 
+          isOpen={showStreakDetailsModal} 
+          onClose={() => setShowStreakDetailsModal(false)}
+          backdrop="blur"
+          placement="center"
+          classNames={{
+            backdrop: "bg-black/60",
+            base: "bg-[#0A0B0D] border border-gray-800/50 shadow-xl text-white rounded-2xl",
+            header: "border-b border-gray-800/50",
+            body: "py-6",
+            footer: "border-t border-gray-800/50"
+          }}
+          size="lg"
+        >
+          <ModalContent>
+            <ModalHeader className="flex flex-col gap-1">
+              <h3 className="text-xl font-medium">Your Streak Details</h3>
+              <p className="text-sm text-gray-400">View your active market and betting pool</p>
+            </ModalHeader>
+            <ModalBody>
+              <div className="space-y-6">
+                {/* Markets Section */}
+                <div>
+                  <h4 className="text-lg font-medium mb-4">Your Active Market</h4>
+                  {userMarkets.length === 0 ? (
+                    <p className="text-gray-400">No active markets found for your streak.</p>
+                  ) : (
+                    <div className="space-y-4">
+                      {userMarkets.map((market) => (
+                        <div key={market.publicKey.toBase58()} className="bg-gray-800/30 border border-gray-700/50 rounded-xl p-4">
+                          <div className="flex justify-between items-start mb-3">
+                            <div>
+                              <p className="text-sm text-gray-400">Market ID</p>
+                              <p className="font-mono">{market.publicKey.toBase58()}</p>
+                            </div>
+                            <Chip
+                              size="sm"
+                              className={market.status.open ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-gray-500/10 border-gray-500/20 text-gray-400'}
+                            >
+                              {market.status.open ? 'Open' : 'Closed'}
+                            </Chip>
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4 mt-4">
+                            <div>
+                              <p className="text-sm text-gray-400">Long Pool (Success)</p>
+                              <p className="text-lg font-medium">
+                                {(market.totalLongAmount.toNumber() / 1_000_000).toFixed(2)} USDC
+                              </p>
+                            </div>
+                            <div>
+                              <p className="text-sm text-gray-400">Short Pool (Fail)</p>
+                              <p className="text-lg font-medium">
+                                {(market.totalShortAmount.toNumber() / 1_000_000).toFixed(2)} USDC
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="mt-4 pt-4 border-t border-gray-700/50">
+                            <div className="grid grid-cols-2 gap-4">
+                              <div>
+                                <p className="text-sm text-gray-400">Betting Ends</p>
+                                <p className="text-sm">
+                                  {new Date(market.bettingEndsTimestamp.toNumber() * 1000).toLocaleString()}
+                                </p>
+                              </div>
+                              <div>
+                                <p className="text-sm text-gray-400">Task Deadline</p>
+                                <p className="text-sm">
+                                  {new Date(market.taskDeadlineTimestamp.toNumber() * 1000).toLocaleString()}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </ModalBody>
+            <ModalFooter>
+              <Button 
+                className="w-full bg-gray-800 hover:bg-gray-700 text-white border border-gray-700 rounded-xl"
+                onClick={() => setShowStreakDetailsModal(false)}
+              >
+                Close
               </Button>
             </ModalFooter>
           </ModalContent>
