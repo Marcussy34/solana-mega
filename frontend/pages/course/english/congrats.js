@@ -5,7 +5,7 @@ const CongratsPage = () => {
   const router = useRouter();
 
   const handleContinue = () => {
-    router.push('/course/english/streak');
+    router.push('/course/english?lesson1=complete');
   };
 
   return (

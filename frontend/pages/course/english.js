@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import {
   IconArrowLeft,
   // Placeholder icons for header if needed later
   IconBook, 
-  IconMenuBook 
+  IconMenuBook,
+  IconCircleCheck // Added Check icon
 } from '@tabler/icons-react';
 import { Timeline } from '@/components/ui/timeline'; 
 
@@ -25,41 +26,52 @@ const EnglishCourseHeader = () => (
   </div>
 );
 
-// Timeline data with INVERTED card styles (white cards on dark background)
-const englishTimelineData = [
+// Function to generate timeline data based on completion state
+const generateTimelineData = (unit1Complete) => [
   {
     title: "Unit 1: Basic Greetings",
     content: (
-      <div className="p-4 bg-white rounded-lg shadow-md border border-zinc-200">
-        <h4 className="font-semibold text-lg mb-2 text-green-600">Start Your Journey!</h4>
+      <div className={`p-4 rounded-lg shadow-md border ${unit1Complete ? 'bg-green-100/50 border-green-300' : 'bg-white border-zinc-200'}`}> 
+        <div className="flex justify-between items-center mb-2">
+          <h4 className="font-semibold text-lg text-green-600">Start Your Journey!</h4>
+          {unit1Complete && <IconCircleCheck className="text-green-600" size={24} />}
+        </div>
         <p className="text-zinc-700 text-sm mb-3">
           Learn common greetings and introductions.
         </p>
-        <Link href="/course/english/quiz/1" passHref>
-          <button className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm">
-            Start Lesson 1
-          </button>
-        </Link>
+        {!unit1Complete && (
+          <Link href="/course/english/quiz/1" passHref>
+            <button className="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm">
+              Start Lesson 1
+            </button>
+          </Link>
+        )}
       </div>
     ),
   },
   {
     title: "Unit 2: Simple Sentences",
     content: (
-      <div className="p-4 bg-white rounded-lg shadow-md border border-zinc-200">
-        <h4 className="font-semibold text-lg mb-2 text-blue-600">Build Sentences!</h4>
+      <div className={`p-4 rounded-lg shadow-md border ${unit1Complete ? 'bg-white border-zinc-200' : 'bg-zinc-100 border-zinc-200 opacity-60'}`}> 
+        <h4 className={`font-semibold text-lg mb-2 ${unit1Complete ? 'text-blue-600' : 'text-blue-400'}`}>Build Sentences!</h4>
         <p className="text-zinc-700 text-sm">
           Learn how to form basic sentences in English.
         </p>
-        <p className="text-xs text-zinc-500 mt-2">(Locked - Complete Unit 1)</p>
+        {unit1Complete ? (
+          <button className="mt-3 bg-blue-500 hover:bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors text-sm">
+            Start Unit 2
+          </button>
+        ) : (
+          <p className="text-xs text-zinc-500 mt-2">(Locked - Complete Unit 1)</p>
+        )}
       </div>
     ),
   },
   {
     title: "Unit 3: Asking Questions",
     content: (
-      <div className="p-4 bg-white rounded-lg shadow-md border border-zinc-200">
-        <h4 className="font-semibold text-lg mb-2 text-yellow-600">Ask Away!</h4>
+      <div className="p-4 bg-zinc-100 rounded-lg shadow-md border border-zinc-200 opacity-60"> 
+        <h4 className="font-semibold text-lg mb-2 text-yellow-400">Ask Away!</h4>
         <p className="text-zinc-700 text-sm">
           Learn how to form questions for different situations.
         </p>
@@ -70,8 +82,8 @@ const englishTimelineData = [
   {
     title: "Unit 4: Vocabulary Basics",
     content: (
-      <div className="p-4 bg-white rounded-lg shadow-md border border-zinc-200">
-        <h4 className="font-semibold text-lg mb-2 text-orange-600">Expand Your Words!</h4>
+      <div className="p-4 bg-zinc-100 rounded-lg shadow-md border border-zinc-200 opacity-60">
+        <h4 className="font-semibold text-lg mb-2 text-orange-400">Expand Your Words!</h4>
         <p className="text-zinc-700 text-sm">
           Build your basic vocabulary with common nouns and verbs.
         </p>
@@ -82,8 +94,8 @@ const englishTimelineData = [
   {
     title: "Unit 5: Review & Practice",
     content: (
-      <div className="p-4 bg-white rounded-lg shadow-md border border-zinc-200">
-        <h4 className="font-semibold text-lg mb-2 text-red-600">Practice Time!</h4>
+      <div className="p-4 bg-zinc-100 rounded-lg shadow-md border border-zinc-200 opacity-60">
+        <h4 className="font-semibold text-lg mb-2 text-red-400">Practice Time!</h4>
         <p className="text-zinc-700 text-sm">
           Review everything learned so far and practice with exercises.
         </p>
@@ -96,6 +108,20 @@ const englishTimelineData = [
 
 const EnglishCoursePage = () => {
   const router = useRouter(); 
+  // State to track completion
+  const [unit1Completed, setUnit1Completed] = useState(false);
+
+  // Check query parameter on mount
+  useEffect(() => {
+    if (router.query.lesson1 === 'complete') {
+      setUnit1Completed(true);
+      // Optionally remove the query parameter from URL
+      // router.replace('/course/english', undefined, { shallow: true });
+    }
+  }, [router.query]);
+
+  // Generate timeline data based on state
+  const englishTimelineData = generateTimelineData(unit1Completed);
 
   return (
     // Set main background to dark gray (zinc-900) and text to light
