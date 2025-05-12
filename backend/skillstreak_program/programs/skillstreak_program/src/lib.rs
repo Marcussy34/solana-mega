@@ -3,9 +3,10 @@ use anchor_spl::{
     associated_token::AssociatedToken,
     token::{self, Mint, Token, TokenAccount, Transfer},
 };
+use anchor_lang::system_program;
 
 // Update with the actual deployed Program ID
-declare_id!("9m23Z6FXzQ6wwDTDmguT39SM5eLsD3wAMNfLRqoxhqQH");
+declare_id!("7LeARRwbauXQ1W4Cr22ZEyPUVP5wHqYijXvkvPaVpguP");
 
 pub const USER_SEED: &[u8] = b"user";
 pub const VAULT_SEED: &[u8] = b"vault";
@@ -296,10 +297,56 @@ pub mod skillstreak_program {
         user_state.accrued_yield = 0;
         user_state.lock_in_end_timestamp = 0;
 
+        // Close market accounts
+        let dest_starting_lamports = ctx.accounts.user.lamports();
+        let market_state_lamports = ctx.accounts.market_state.to_account_info().lamports();
+        let market_escrow_lamports = ctx.accounts.market_escrow_vault.to_account_info().lamports();
+        
+        **ctx.accounts.user.lamports.borrow_mut() = dest_starting_lamports
+            .checked_add(market_state_lamports)
+            .ok_or(ErrorCode::ArithmeticError)?
+            .checked_add(market_escrow_lamports)
+            .ok_or(ErrorCode::ArithmeticError)?;
+
+        // Zero out both accounts' lamports and data
+        **ctx.accounts.market_state.to_account_info().lamports.borrow_mut() = 0;
+        **ctx.accounts.market_escrow_vault.to_account_info().lamports.borrow_mut() = 0;
+        ctx.accounts.market_state.to_account_info().data.borrow_mut().fill(0);
+        ctx.accounts.market_escrow_vault.to_account_info().data.borrow_mut().fill(0);
+
         msg!("Early withdrawal completed:");
         msg!("  Penalty sent to treasury wallet: {}", penalty_amount);
         msg!("  Amount returned to user: {}", return_amount);
+        msg!("  Market accounts closed successfully");
         
+        Ok(())
+    }
+
+    // Add new close_market instruction
+    pub fn close_market(ctx: Context<CloseMarket>) -> Result<()> {
+        // Verify the market belongs to the user
+        if ctx.accounts.market_state.user_being_bet_on != ctx.accounts.user.key() {
+            return err!(ErrorCode::MarketBelongsToAnotherUser);
+        }
+
+        // Transfer lamports from market state back to the user
+        let dest_starting_lamports = ctx.accounts.user.lamports();
+        let market_state_lamports = ctx.accounts.market_state.to_account_info().lamports();
+        let market_escrow_lamports = ctx.accounts.market_escrow_vault.to_account_info().lamports();
+        
+        **ctx.accounts.user.lamports.borrow_mut() = dest_starting_lamports
+            .checked_add(market_state_lamports)
+            .ok_or(ErrorCode::ArithmeticError)?
+            .checked_add(market_escrow_lamports)
+            .ok_or(ErrorCode::ArithmeticError)?;
+
+        // Zero out both accounts' lamports and data
+        **ctx.accounts.market_state.to_account_info().lamports.borrow_mut() = 0;
+        **ctx.accounts.market_escrow_vault.to_account_info().lamports.borrow_mut() = 0;
+        ctx.accounts.market_state.to_account_info().data.borrow_mut().fill(0);
+        ctx.accounts.market_escrow_vault.to_account_info().data.borrow_mut().fill(0);
+
+        msg!("Market state and escrow vault accounts closed successfully");
         Ok(())
     }
 
@@ -781,6 +828,8 @@ pub enum ErrorCode {
     UserCourseNotStarted,
     #[msg("The betting window duration extends beyond or too close to the task deadline.")]
     BettingWindowTooLong,
+    #[msg("This market belongs to another user.")]
+    MarketBelongsToAnotherUser,
 }
 
 #[derive(Accounts)]
@@ -865,13 +914,30 @@ pub struct EarlyWithdraw<'info> {
     pub treasury_token_account: Account<'info, TokenAccount>,
 
     /// CHECK: Hardcoded treasury wallet address.
-    // Temporarily removing constraint for debugging the serialization/simulation mismatch
-    // #[account(address = treasury_wallet())]
     pub treasury_wallet_account: AccountInfo<'info>,
+
+    // Add market accounts for closing
+    #[account(
+        mut,
+        seeds = [
+            MARKET_SEED,
+            user.key().as_ref(),
+            user_state.key().as_ref()
+        ],
+        bump,
+        constraint = market_state.user_being_bet_on == user.key()
+    )]
+    pub market_state: Account<'info, MarketState>,
+
+    #[account(
+        mut,
+        seeds = [MARKET_ESCROW_VAULT_SEED, market_state.key().as_ref()],
+        bump
+    )]
+    pub market_escrow_vault: Account<'info, MarketEscrowVault>,
 
     pub usdc_mint: Account<'info, Mint>,
     pub token_program: Program<'info, Token>,
-    // Add required programs/sysvars for init_if_needed
     pub system_program: Program<'info, System>,
     pub associated_token_program: Program<'info, AssociatedToken>,
     pub rent: Sysvar<'info, Rent>,
@@ -898,7 +964,7 @@ pub struct StartCourse<'info> {
 
     // --- Accounts for automatic market creation ---
     #[account(
-        init,
+        init_if_needed,
         payer = user, // User pays for market state creation
         space = 8 + MarketState::INIT_SPACE,
         seeds = [
@@ -911,7 +977,7 @@ pub struct StartCourse<'info> {
     pub market_state: Account<'info, MarketState>,
 
     #[account(
-        init,
+        init_if_needed,
         payer = user, // User pays for market escrow vault creation
         space = 8 + MarketEscrowVault::INIT_SPACE,
         seeds = [MARKET_ESCROW_VAULT_SEED, market_state.key().as_ref()], // market_state.key() is now available
@@ -920,7 +986,7 @@ pub struct StartCourse<'info> {
     pub market_escrow_vault: Account<'info, MarketEscrowVault>,
 
     #[account(
-        init,
+        init_if_needed,
         payer = user, // User pays for ATA creation
         associated_token::mint = usdc_mint,
         associated_token::authority = market_escrow_vault, // market_escrow_vault PDA is the authority
@@ -1238,4 +1304,39 @@ pub struct WinningsClaimed {
     pub market: Pubkey,
     pub bettor: Pubkey,
     pub amount_claimed: u64,
+}
+
+// Add new CloseMarket context
+#[derive(Accounts)]
+pub struct CloseMarket<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [
+            MARKET_SEED,
+            user.key().as_ref(),
+            user_state.key().as_ref()
+        ],
+        bump = market_state.bump,
+        constraint = market_state.user_being_bet_on == user.key()
+    )]
+    pub market_state: Account<'info, MarketState>,
+
+    #[account(
+        mut,
+        seeds = [MARKET_ESCROW_VAULT_SEED, market_state.key().as_ref()],
+        bump
+    )]
+    pub market_escrow_vault: Account<'info, MarketEscrowVault>,
+
+    #[account(
+        seeds = [USER_SEED, user.key().as_ref()],
+        bump,
+        constraint = user_state.user == user.key()
+    )]
+    pub user_state: Account<'info, UserState>,
+
+    pub system_program: Program<'info, System>,
 }
