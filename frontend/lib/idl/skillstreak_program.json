@@ -1308,6 +1308,52 @@
       ]
     },
     {
+      "name": "record_task",
+      "discriminator": [
+        185,
+        99,
+        227,
+        37,
+        157,
+        81,
+        64,
+        55
+      ],
+      "accounts": [
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "user_state",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  117,
+                  115,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "user"
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
       "name": "start_course",
       "discriminator": [
         178,

@@ -716,6 +716,61 @@ pub mod skillstreak_program {
         msg!("Withdrawn {} unlocked tokens to user", unlocked_amount);
         Ok(())
     }
+
+    // Add record_task instruction
+    pub fn record_task(ctx: Context<RecordTask>) -> Result<()> {
+        let user_state = &mut ctx.accounts.user_state;
+        let clock = Clock::get()?;
+        let current_timestamp = clock.unix_timestamp;
+
+        // Validate lock-in is active
+        if user_state.lock_in_end_timestamp == 0 || current_timestamp >= user_state.lock_in_end_timestamp {
+            return err!(ErrorCode::CourseNotActive);
+        }
+
+        // 1. Calculate how many 24-hour periods have passed since deposit
+        let days_since_deposit = (current_timestamp - user_state.deposit_timestamp)
+            .checked_div(DAILY_TASK_CYCLE_SECONDS)
+            .ok_or(ErrorCode::ArithmeticError)?;
+        
+        // Update streak based on days passed (this is the automatic incrementer)
+        user_state.current_streak = days_since_deposit as u64;
+
+        // 2. Check if this task completion is within 24 hours of last activity
+        let last_valid_completion = user_state.last_task_timestamp
+            .checked_add(DAILY_TASK_CYCLE_SECONDS)
+            .ok_or(ErrorCode::ArithmeticError)?;
+
+        if current_timestamp > last_valid_completion {
+            // Missed the window between activities, reset streak
+            user_state.current_streak = 0;
+            user_state.miss_count = user_state.miss_count
+                .checked_add(1)
+                .ok_or(ErrorCode::ArithmeticError)?;
+            msg!("Too much time between activities. Streak reset. Miss count: {}", user_state.miss_count);
+        } else {
+            msg!("Activity recorded successfully. Current streak: {}", user_state.current_streak);
+        }
+
+        // Update last task timestamp
+        user_state.last_task_timestamp = current_timestamp;
+
+        // For MVP: Add a small fixed yield amount based on streak
+        let yield_amount = match user_state.current_streak {
+            0..=4 => 1_000, // 0.001 USDC (1000 lamports)
+            5..=9 => 2_000, // 0.002 USDC
+            _ => 5_000,     // 0.005 USDC
+        };
+
+        user_state.accrued_yield = user_state.accrued_yield
+            .checked_add(yield_amount)
+            .ok_or(ErrorCode::ArithmeticError)?;
+
+        msg!("Task recorded. Timestamp: {}", current_timestamp);
+        msg!("Added yield: {} lamports", yield_amount);
+        
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -1383,4 +1438,21 @@ pub struct WithdrawUnlocked<'info> {
 
     pub usdc_mint: Account<'info, Mint>,
     pub token_program: Program<'info, Token>,
+}
+
+// Add RecordTask context after WithdrawUnlocked context
+#[derive(Accounts)]
+pub struct RecordTask<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [USER_SEED, user.key().as_ref()],
+        bump,
+        constraint = user_state.user == user.key()
+    )]
+    pub user_state: Account<'info, UserState>,
+
+    pub system_program: Program<'info, System>,
 }
