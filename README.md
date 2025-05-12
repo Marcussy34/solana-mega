@@ -121,34 +121,54 @@ It's designed to **gamify consistency** with **streaks**, **top-up penalties**, 
 ## 🛠️ Tech Stack
 
 ### ⚛️ Frontend
-- **Next.js (no TypeScript)**
-- **Tailwind CSS** – UI
-- **Framer Motion** – animations
+- **Next.js (v13.5.4)** 
+- **React (v18.2.0)**
+- **Tailwind CSS** – UI styling with **tailwindcss-animate**
+- **Framer Motion & GSAP** – animations
 - **Solana Wallet Adapter** – for Phantom, Backpack, etc.
+- **@heroui/react & @tabler/icons-react** – UI components/icons
+- **class-variance-authority & clsx** – utility styling
 
 ### 🔗 Blockchain & DeFi
 - **Solana Devnet**
 - **USDC (SPL token)**
-- **Anchor Framework** – for on-chain logic (long/short system)
+- **Anchor Framework (v0.30.0)** – for on-chain logic
+- **@solana/web3.js & @solana/spl-token** – Solana interactions
 - **DeFi Protocols** (e.g., Kamino, MarginFi) – for real yield (future)
 
 ### 🔧 Backend / Infra
-- **Supabase** – for user streaks, deposits, history
-- **CRON Jobs** – for streak validation
-- **Firebase** – as an alternative backend stack
+- **Anchor-based Solana Program**
+- **Supabase** – for user streaks, deposits, history (planned)
+- **CRON Jobs** – for streak validation (planned)
 - **Vercel** – frontend deployment
 
 ---
 
-## 📁 Key Directory Structure (MVP)
+## 📁 Project Structure
 
 ```bash
-/pages           # Main pages (task view, dashboard, etc.)
-/components      # UI components (cards, modals, charts)
-/utils           # Logic for streaks, APR, penalties
-/hooks           # State and wallet hooks
-/contracts       # Solana programs (Anchor smart contracts)
+/frontend
+  /pages           # Main pages (index, courses, learn, etc.)
+    /course        # Course-specific pages
+    /api           # API routes
+  /components      # UI components
+    /ui            # Shared UI elements
+  /hooks           # Custom React hooks
+  /styles          # Global styles and Tailwind config
+  /lib             # Utility functions and shared logic
+  /public          # Static assets
+
+/backend
+  /skillstreak_program  # Solana program (Anchor)
+    /programs
+      /skillstreak_program
+        /src        # Main program logic (lib.rs)
+    /tests          # Program tests
 ```
+
+The project is structured into two main directories:
+- **Frontend**: Next.js application with React components
+- **Backend**: Solana programs written using Anchor framework
 
 ---
 
@@ -172,15 +192,19 @@ SkillStreak addresses real problems:
 
 ---
 
-## 🚀 Status
+## 🚀 Current Status
 
-- MVP learning track: ✅  
-- USDC deposit & yield logic: ✅  
-- Streak management: ✅  
-- Simulated Duolingo track: ✅  
-- Long/Short streak betting (on Devnet): ✅  
-- External integration (placeholder): 🔜  
-- Full on-chain deployment: 🔜
+- ✅ Frontend UI implementation (pages, components)
+- ✅ Wallet connection integration
+- ✅ Learning track UI implementation (courses, lessons)
+- ✅ Initial Solana program structure (Anchor)
+- ✅ User initialization flow
+- ✅ USDC deposit & yield logic 
+- ✅ Streak management 
+- ✅ Solana program integration with frontend
+- ✅ Long/Short streak betting 
+- 🔜 External integration (placeholders ready)
+- 🔜 Full production deployment
 
 ---
 
@@ -190,3 +214,48 @@ SkillStreak addresses real problems:
 - Crypto learners  
 - Builders, devs, and DeFi natives  
 - Anyone who wants to **earn while they grow**
+
+## ��️ Development Setup
+
+### Requirements
+- Node.js v18+ and npm/yarn
+- Solana CLI tools
+- Anchor framework
+- Phantom wallet or compatible Solana wallet
+
+### Frontend Setup
+```bash
+# Navigate to frontend directory
+cd frontend
+
+# Install dependencies
+npm install --legacy-peer-deps
+
+# Start development server
+npm run dev
+```
+
+### Backend/Solana Program Setup
+```bash
+# Navigate to program directory
+cd backend/skillstreak_program
+
+# Build the program
+anchor build
+
+# Test the program
+anchor test
+
+# Deploy to localnet
+anchor deploy
+```
+
+### Environment Variables
+### Create a `.env.local` file in the frontend directory with:
+```
+NEXT_PUBLIC_CLUSTER_URL=http://localhost:8899
+# Or use Solana Devnet
+# NEXT_PUBLIC_CLUSTER_URL=https://api.devnet.solana.com
+```
+
+---

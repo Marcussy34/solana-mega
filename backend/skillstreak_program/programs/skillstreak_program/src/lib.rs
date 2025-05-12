@@ -94,12 +94,9 @@ pub mod skillstreak_program {
             .checked_add(deposit_amount)
             .ok_or(ErrorCode::ArithmeticError)?;
 
-        // Reset initial_deposit_amount since we're modifying the deposit
-        // It will be set to the full deposit_amount when starting a course
-        user_state.initial_deposit_amount = 0;
-
         msg!("Updated User State:");
         msg!("  New Total Deposit: {}", user_state.deposit_amount);
+        msg!("  Locked Amount: {}", user_state.initial_deposit_amount);
 
         Ok(())
     }
@@ -111,9 +108,11 @@ pub mod skillstreak_program {
     pub fn start_course(
         ctx: Context<StartCourse>,
         lock_in_duration_days: u64,
+        lock_amount: u64,
     ) -> Result<()> {
         msg!("Starting course for user: {}", ctx.accounts.user.key());
         msg!("Lock-in duration (days): {}", lock_in_duration_days);
+        msg!("Lock amount: {}", lock_amount);
 
         let user_state = &mut ctx.accounts.user_state;
         let clock = Clock::get()?;
@@ -124,14 +123,18 @@ pub mod skillstreak_program {
             return err!(ErrorCode::CourseAlreadyStarted);
         }
 
-        // Validation: Ensure there is a deposit to lock in
-        if user_state.deposit_amount == 0 {
-            return err!(ErrorCode::NoDepositToStartCourse);
+        // Validation: Ensure lock_amount is not zero
+        if lock_amount == 0 {
+            return err!(ErrorCode::ZeroLockAmount);
         }
 
-        // --- 1. Update User State for Course Start ---
-        // Set initial_deposit_amount to current deposit_amount - this is now locked in
-        user_state.initial_deposit_amount = user_state.deposit_amount;
+        // Validation: Ensure user has enough balance to lock
+        if lock_amount > user_state.deposit_amount {
+            return err!(ErrorCode::InsufficientBalance);
+        }
+
+        // Set initial_deposit_amount to the specified lock_amount
+        user_state.initial_deposit_amount = lock_amount;
         user_state.deposit_timestamp = current_timestamp;
         let lock_in_seconds = lock_in_duration_days
             .checked_mul(24 * 60 * 60) // seconds in a day
@@ -187,12 +190,12 @@ pub mod skillstreak_program {
         market_state.status = MarketStatus::Open;
         market_state.platform_fee_basis_points = DEFAULT_PLATFORM_FEE_BASIS_POINTS;
         market_state.platform_fee_claimed = false;
-        market_state.bump = ctx.bumps.market_state; // Anchor handles assigning this from PDA derivation
+        market_state.bump = ctx.bumps.market_state;
 
         // Initialize market_escrow_vault state
         let market_escrow_vault = &mut ctx.accounts.market_escrow_vault;
         market_escrow_vault.market = market_state.key();
-        market_escrow_vault.bump = ctx.bumps.market_escrow_vault; // Anchor handles assigning this
+        market_escrow_vault.bump = ctx.bumps.market_escrow_vault;
 
         emit!(MarketCreated {
             market: market_state.key(),
@@ -218,31 +221,22 @@ pub mod skillstreak_program {
             return err!(ErrorCode::LockInPeriodNotEnded);
         }
 
-        // Calculate total amount to withdraw (deposit + yield)
-        let total_amount = user_state.deposit_amount
+        // Calculate total amount to withdraw (locked deposit + yield)
+        let total_amount = user_state.initial_deposit_amount
             .checked_add(user_state.accrued_yield)
             .ok_or(ErrorCode::ArithmeticError)?;
 
-        // Transfer tokens from vault to user
-        let seeds = &[VAULT_SEED, &[ctx.bumps.vault]];
-        let signer = &[&seeds[..]];
-        
-        let cpi_accounts = Transfer {
-            from: ctx.accounts.vault_token_account.to_account_info(),
-            to: ctx.accounts.user_token_account.to_account_info(),
-            authority: ctx.accounts.vault.to_account_info(),
-        };
-        let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
-        token::transfer(cpi_ctx, total_amount)?;
+        // Instead of transferring to wallet, add to deposit_amount (balance)
+        user_state.deposit_amount = user_state.deposit_amount
+            .checked_add(total_amount)
+            .ok_or(ErrorCode::ArithmeticError)?;
 
-        // Reset user state values
-        user_state.deposit_amount = 0;
-        user_state.initial_deposit_amount = 0; // Reset initial deposit amount
+        // Reset locked amount and yield
+        user_state.initial_deposit_amount = 0;
         user_state.accrued_yield = 0;
         user_state.lock_in_end_timestamp = 0;
 
-        msg!("Withdrawn {} tokens to user", total_amount);
+        msg!("Unlocked {} tokens to user's balance", total_amount);
         Ok(())
     }
 
@@ -255,22 +249,19 @@ pub mod skillstreak_program {
             return err!(ErrorCode::LockInPeriodEnded);
         }
 
-        // Calculate penalty (50% of deposit)
-        let penalty_amount = user_state.deposit_amount
+        // Calculate penalty (50% of locked deposit)
+        let penalty_amount = user_state.initial_deposit_amount
             .checked_div(2)
             .ok_or(ErrorCode::ArithmeticError)?;
         
-        // Calculate amount to return to user (50% of deposit + all yield)
-        let return_amount = user_state.deposit_amount
+        // Calculate amount to return (ONLY 50% of locked deposit)
+        let return_amount = user_state.initial_deposit_amount
             .checked_sub(penalty_amount)
-            .ok_or(ErrorCode::ArithmeticError)?
-            .checked_add(user_state.accrued_yield)
             .ok_or(ErrorCode::ArithmeticError)?;
 
+        // Transfer penalty to treasury
         let vault_seeds = &[VAULT_SEED, &[ctx.bumps.vault]];
         let vault_signer = &[&vault_seeds[..]];
-
-        // Transfer penalty to treasury wallet's ATA
         {
             let cpi_accounts = Transfer {
                 from: ctx.accounts.vault_token_account.to_account_info(),
@@ -282,25 +273,23 @@ pub mod skillstreak_program {
             token::transfer(cpi_ctx, penalty_amount)?;
         }
 
-        // Transfer remaining amount to user
-        {
-            let cpi_accounts = Transfer {
-                from: ctx.accounts.vault_token_account.to_account_info(),
-                to: ctx.accounts.user_token_account.to_account_info(),
-                authority: ctx.accounts.vault.to_account_info(),
-            };
-            let cpi_program = ctx.accounts.token_program.to_account_info();
-            let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, vault_signer);
-            token::transfer(cpi_ctx, return_amount)?;
-        }
-
-        // Reset user state values
-        user_state.deposit_amount = 0;
-        user_state.initial_deposit_amount = 0; // Reset initial deposit amount
-        user_state.accrued_yield = 0;
+        // Update user state - add return amount back to deposit_amount
+        // First subtract the full locked amount
+        user_state.deposit_amount = user_state.deposit_amount
+            .checked_sub(user_state.initial_deposit_amount)
+            .ok_or(ErrorCode::ArithmeticError)?;
+        
+        // Then add back the 50% we're returning
+        user_state.deposit_amount = user_state.deposit_amount
+            .checked_add(return_amount)
+            .ok_or(ErrorCode::ArithmeticError)?;
+        
+        // Reset locked amount but keep yield counter
+        user_state.initial_deposit_amount = 0;
         user_state.lock_in_end_timestamp = 0;
+        // Do NOT reset accrued_yield as it's just a counter now
 
-        // Close market accounts
+        // Close market accounts if they exist
         let dest_starting_lamports = ctx.accounts.user.lamports();
         let market_state_lamports = ctx.accounts.market_state.to_account_info().lamports();
         let market_escrow_lamports = ctx.accounts.market_escrow_vault.to_account_info().lamports();
@@ -318,8 +307,8 @@ pub mod skillstreak_program {
         ctx.accounts.market_escrow_vault.to_account_info().data.borrow_mut().fill(0);
 
         msg!("Early withdrawal completed:");
-        msg!("  Penalty sent to treasury wallet: {}", penalty_amount);
-        msg!("  Amount returned to user: {}", return_amount);
+        msg!("  Penalty sent to treasury: {}", penalty_amount);
+        msg!("  Amount added back to balance: {}", return_amount);
         msg!("  Market accounts closed successfully");
         
         Ok(())
@@ -697,6 +686,95 @@ pub mod skillstreak_program {
         });
         Ok(())
     }
+
+    pub fn withdraw_unlocked(ctx: Context<WithdrawUnlocked>) -> Result<()> {
+        let user_state = &mut ctx.accounts.user_state;
+        
+        // Calculate unlocked amount (total deposit minus locked amount)
+        let unlocked_amount = user_state.deposit_amount
+            .checked_sub(user_state.initial_deposit_amount)
+            .ok_or(ErrorCode::ArithmeticError)?;
+
+        if unlocked_amount == 0 {
+            return err!(ErrorCode::NoUnlockedBalance);
+        }
+
+        // Transfer unlocked tokens from vault to user
+        let seeds = &[VAULT_SEED, &[ctx.bumps.vault]];
+        let signer = &[&seeds[..]];
+        
+        let cpi_accounts = Transfer {
+            from: ctx.accounts.vault_token_account.to_account_info(),
+            to: ctx.accounts.user_token_account.to_account_info(),
+            authority: ctx.accounts.vault.to_account_info(),
+        };
+        let cpi_program = ctx.accounts.token_program.to_account_info();
+        let cpi_ctx = CpiContext::new_with_signer(cpi_program, cpi_accounts, signer);
+        token::transfer(cpi_ctx, unlocked_amount)?;
+
+        // Update user state - reduce deposit_amount by unlocked_amount
+        user_state.deposit_amount = user_state.deposit_amount
+            .checked_sub(unlocked_amount)
+            .ok_or(ErrorCode::ArithmeticError)?;
+
+        msg!("Withdrawn {} unlocked tokens to user", unlocked_amount);
+        Ok(())
+    }
+
+    // Add record_task instruction
+    pub fn record_task(ctx: Context<RecordTask>) -> Result<()> {
+        let user_state = &mut ctx.accounts.user_state;
+        let clock = Clock::get()?;
+        let current_timestamp = clock.unix_timestamp;
+
+        // Validate lock-in is active
+        if user_state.lock_in_end_timestamp == 0 || current_timestamp >= user_state.lock_in_end_timestamp {
+            return err!(ErrorCode::CourseNotActive);
+        }
+
+        // 1. Calculate how many 24-hour periods have passed since deposit
+        let days_since_deposit = (current_timestamp - user_state.deposit_timestamp)
+            .checked_div(DAILY_TASK_CYCLE_SECONDS)
+            .ok_or(ErrorCode::ArithmeticError)?;
+        
+        // Update streak based on days passed (this is the automatic incrementer)
+        user_state.current_streak = days_since_deposit as u64;
+
+        // 2. Check if this task completion is within 24 hours of last activity
+        let last_valid_completion = user_state.last_task_timestamp
+            .checked_add(DAILY_TASK_CYCLE_SECONDS)
+            .ok_or(ErrorCode::ArithmeticError)?;
+
+        if current_timestamp > last_valid_completion {
+            // Missed the window between activities, reset streak
+            user_state.current_streak = 0;
+            user_state.miss_count = user_state.miss_count
+                .checked_add(1)
+                .ok_or(ErrorCode::ArithmeticError)?;
+            msg!("Too much time between activities. Streak reset. Miss count: {}", user_state.miss_count);
+        } else {
+            msg!("Activity recorded successfully. Current streak: {}", user_state.current_streak);
+        }
+
+        // Update last task timestamp
+        user_state.last_task_timestamp = current_timestamp;
+
+        // For MVP: Add a small fixed yield amount based on streak
+        let yield_amount = match user_state.current_streak {
+            0..=4 => 1_000, // 0.001 USDC (1000 lamports)
+            5..=9 => 2_000, // 0.002 USDC
+            _ => 5_000,     // 0.005 USDC
+        };
+
+        user_state.accrued_yield = user_state.accrued_yield
+            .checked_add(yield_amount)
+            .ok_or(ErrorCode::ArithmeticError)?;
+
+        msg!("Task recorded. Timestamp: {}", current_timestamp);
+        msg!("Added yield: {} lamports", yield_amount);
+        
+        Ok(())
+    }
 }
 
 #[derive(Accounts)]
@@ -802,6 +880,12 @@ pub enum ErrorCode {
     CourseAlreadyStarted,
     #[msg("Cannot start a course without an initial deposit.")]
     NoDepositToStartCourse,
+    #[msg("Lock amount cannot be zero.")]
+    ZeroLockAmount,
+    #[msg("Insufficient balance for requested lock amount.")]
+    InsufficientBalance,
+    #[msg("No unlocked balance available for withdrawal.")]
+    NoUnlockedBalance,
     // Add other potential errors here
 
     // Betting System Errors
@@ -833,6 +917,8 @@ pub enum ErrorCode {
     BettingWindowTooLong,
     #[msg("This market belongs to another user.")]
     MarketBelongsToAnotherUser,
+    #[msg("Course is not active. Either it hasn't started or has already ended.")]
+    CourseNotActive,
 }
 
 #[derive(Accounts)]
@@ -847,30 +933,6 @@ pub struct Withdraw<'info> {
         constraint = user_state.user == user.key(),
     )]
     pub user_state: Account<'info, UserState>,
-
-    #[account(
-        mut,
-        constraint = user_token_account.mint == usdc_mint.key(),
-        constraint = user_token_account.owner == user.key()
-    )]
-    pub user_token_account: Account<'info, TokenAccount>,
-
-    /// CHECK: Vault PDA is safe because it's derived from a known seed and verified by token account authority
-    #[account(
-        seeds = [VAULT_SEED],
-        bump
-    )]
-    pub vault: AccountInfo<'info>,
-
-    #[account(
-        mut,
-        associated_token::mint = usdc_mint,
-        associated_token::authority = vault,
-    )]
-    pub vault_token_account: Account<'info, TokenAccount>,
-
-    pub usdc_mint: Account<'info, Mint>,
-    pub token_program: Program<'info, Token>,
 }
 
 #[derive(Accounts)]
@@ -950,7 +1012,7 @@ pub struct EarlyWithdraw<'info> {
 // Defines the accounts needed for the start_course instruction.
 // This now also includes accounts for automatic market creation.
 #[derive(Accounts)]
-#[instruction(lock_in_duration_days: u64)] // Instruction data
+#[instruction(lock_in_duration_days: u64, lock_amount: u64)] // Added lock_amount parameter
 pub struct StartCourse<'info> {
     // The user starting the course.
     #[account(mut)]
@@ -1335,6 +1397,61 @@ pub struct CloseMarket<'info> {
     pub market_escrow_vault: Account<'info, MarketEscrowVault>,
 
     #[account(
+        seeds = [USER_SEED, user.key().as_ref()],
+        bump,
+        constraint = user_state.user == user.key()
+    )]
+    pub user_state: Account<'info, UserState>,
+
+    pub system_program: Program<'info, System>,
+}
+
+#[derive(Accounts)]
+pub struct WithdrawUnlocked<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    #[account(
+        mut,
+        seeds = [USER_SEED, user.key().as_ref()],
+        bump,
+        constraint = user_state.user == user.key(),
+    )]
+    pub user_state: Account<'info, UserState>,
+
+    #[account(
+        mut,
+        constraint = user_token_account.mint == usdc_mint.key(),
+        constraint = user_token_account.owner == user.key()
+    )]
+    pub user_token_account: Account<'info, TokenAccount>,
+
+    /// CHECK: Vault PDA is safe because it's derived from a known seed and verified by token account authority
+    #[account(
+        seeds = [VAULT_SEED],
+        bump
+    )]
+    pub vault: AccountInfo<'info>,
+
+    #[account(
+        mut,
+        associated_token::mint = usdc_mint,
+        associated_token::authority = vault,
+    )]
+    pub vault_token_account: Account<'info, TokenAccount>,
+
+    pub usdc_mint: Account<'info, Mint>,
+    pub token_program: Program<'info, Token>,
+}
+
+// Add RecordTask context after WithdrawUnlocked context
+#[derive(Accounts)]
+pub struct RecordTask<'info> {
+    #[account(mut)]
+    pub user: Signer<'info>,
+
+    #[account(
+        mut,
         seeds = [USER_SEED, user.key().as_ref()],
         bump,
         constraint = user_state.user == user.key()
