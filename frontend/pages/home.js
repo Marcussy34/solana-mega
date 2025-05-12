@@ -176,7 +176,7 @@ const Home = () => {
   const [notificationVisible, setNotificationVisible] = useState(false);
   const [lockAmount, setLockAmount] = useState('0.5');
   const [showWithdrawUnlockedModal, setShowWithdrawUnlockedModal] = useState(false);
-  const [selectedRiskLevel, setSelectedRiskLevel] = useState('low'); // Add this near other state declarations
+  const [selectedRiskLevel, setSelectedRiskLevel] = useState('low');
 
   // Add these strategy configurations near other constants
   const strategyConfigs = {
@@ -212,6 +212,28 @@ const Home = () => {
         { name: "Leveraged Yield", percentage: "40%", color: "purple-500" },
         { name: "New Protocols", percentage: "10%", color: "rose-500" }
       ]
+    }
+  };
+
+  // Add APY rates configuration
+  const apyRates = {
+    low: {
+      '30': '1%',
+      '90': '2%',
+      '180': '3.5%',
+      '365': '6-8%'
+    },
+    medium: {
+      '30': '2%',
+      '90': '4%',
+      '180': '7%',
+      '365': '10-12%'
+    },
+    high: {
+      '30': '3%',
+      '90': '6%',
+      '180': '10%',
+      '365': '15-20%'
     }
   };
 
@@ -1856,7 +1878,7 @@ const Home = () => {
                       onClick={() => setLockInDays('30')}
                     >
                       <div className="font-medium">1 Month</div>
-                      <div className="text-xs text-gray-400">1%</div>
+                      <div className="text-xs text-gray-400">{apyRates[selectedRiskLevel]['30']}</div>
                     </Button>
                     <Button
                       className={`h-[52px] ${lockInDays === '90' ? 
@@ -1865,7 +1887,7 @@ const Home = () => {
                       onClick={() => setLockInDays('90')}
                     >
                       <div className="font-medium">3 Months</div>
-                      <div className="text-xs text-gray-400">2%</div>
+                      <div className="text-xs text-gray-400">{apyRates[selectedRiskLevel]['90']}</div>
                     </Button>
                     <Button
                       className={`h-[52px] ${lockInDays === '180' ? 
@@ -1874,7 +1896,7 @@ const Home = () => {
                       onClick={() => setLockInDays('180')}
                     >
                       <div className="font-medium">6 Months</div>
-                      <div className="text-xs text-gray-400">3.5%</div>
+                      <div className="text-xs text-gray-400">{apyRates[selectedRiskLevel]['180']}</div>
                     </Button>
                     <Button
                       className={`h-[52px] ${lockInDays === '365' ? 
@@ -1883,7 +1905,7 @@ const Home = () => {
                       onClick={() => setLockInDays('365')}
                     >
                       <div className="font-medium">1 Year</div>
-                      <div className="text-xs text-gray-400">6-8%</div>
+                      <div className="text-xs text-gray-400">{apyRates[selectedRiskLevel]['365']}</div>
                     </Button>
                   </div>
 
