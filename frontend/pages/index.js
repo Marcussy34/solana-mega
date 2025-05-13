@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useId } from "react";
 import { ContainerScroll, Header, Card } from "@/components/ui/container-scroll-animation";
 import { CardContainer, CardBody, CardItem } from "@/components/ui/3d-card";
 import { ThreeDMarquee } from "@/components/ui/3d-marquee";
@@ -8,6 +8,7 @@ import Link from "next/link";
 import Script from 'next/script';
 import Head from 'next/head';
 import { Timeline } from "@/components/ui/timeline";
+import { useOutsideClick } from "@/hooks/use-outside-click";
 
 export default function LandingPage() {
   // State for mobile menu
@@ -270,12 +271,12 @@ export default function LandingPage() {
   ];
 
   // Data for the new Timeline component
-  const skillStreakTimelineData = [
+  const lockedInTimelineData = [
     {
       title: "Sign Up & Connect",
       content: (
-        <div className="text-zinc-800 dark:text-zinc-300 text-sm md:text-base">
-          <p className="mb-2">Quickly create your SkillStreak account and connect your Solana wallet (like Phantom or Solflare). This is your gateway to learning and earning!</p>
+        <div className="text-white text-sm md:text-base">
+          <p className="mb-2">Quickly create your LockedIn account and connect your Solana wallet (like Phantom or Solflare). This is your gateway to learning and earning!</p>
           <img src="/placeholder-signup.png" alt="Sign Up Illustration" className="rounded-lg shadow-md mt-3 w-full max-w-xs filter grayscale" />
         </div>
       ),
@@ -283,7 +284,7 @@ export default function LandingPage() {
     {
       title: "Choose Your Track",
       content: (
-        <div className="text-zinc-800 dark:text-zinc-300 text-sm md:text-base">
+        <div className="text-white text-sm md:text-base">
           <p className="mb-2">Browse our extensive library of courses. Whether it's coding, design, or blockchain fundamentals, pick a learning track that excites you and fits your goals.</p>
           <img src="/placeholder-courses.png" alt="Course Selection Illustration" className="rounded-lg shadow-md mt-3 w-full max-w-xs filter grayscale" />
         </div>
@@ -292,28 +293,59 @@ export default function LandingPage() {
     {
       title: "Learn & Earn Yield",
       content: (
-        <div className="text-zinc-800 dark:text-zinc-300 text-sm md:text-base">
-          <p className="mb-2">Deposit SOL to your SkillStreak account. As you complete lessons and maintain your learning streaks, you'll earn attractive yields on your deposited capital. The more you learn, the more you earn!</p>
+        <div className="text-white text-sm md:text-base">
+          <p className="mb-2">Deposit USDC to your LockedIn account. As you complete lessons and maintain your learning streaks, you'll earn attractive yields on your deposited capital. The more you learn, the more you earn!</p>
         </div>
       ),
     },
     {
       title: "Compete & Bet (Optional)",
       content: (
-        <div className="text-zinc-800 dark:text-zinc-300 text-sm md:text-base">
-          <p className="mb-2">Up the ante with social betting! Challenge friends or other learners on course completion. Stake SOL, race to the finish, and win extra rewards plus bragging rights.</p>
+        <div className="text-white text-sm md:text-base">
+          <p className="mb-2">Up the ante with social betting! Challenge friends or other learners on course completion. Stake USDC, race to the finish, and win extra rewards plus bragging rights.</p>
         </div>
       ),
     },
     {
       title: "Track Progress & Grow",
       content: (
-        <div className="text-zinc-800 dark:text-zinc-300 text-sm md:text-base">
+        <div className="text-white text-sm md:text-base">
           <p className="mb-2">Monitor your achievements on your personalized dashboard. See your completed courses, total earnings, and skill development. Keep the streak alive and watch your knowledge and wallet expand!</p>
           <img src="/placeholder-dashboard.png" alt="Dashboard Illustration" className="rounded-lg shadow-md mt-3 w-full max-w-xs filter grayscale" />
         </div>
       ),
     },
+  ];
+
+  // State and ref for Expandable Cards
+  const [activeCard, setActiveCard] = useState(null);
+  const expandableCardRef = useRef(null);
+  const expandableCardId = useId();
+
+  useEffect(() => {
+    function onKeyDown(event) {
+      if (event.key === "Escape") {
+        setActiveCard(null);
+      }
+    }
+    if (activeCard && typeof activeCard === "object") {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [activeCard]);
+
+  useOutsideClick(expandableCardRef, () => setActiveCard(null));
+
+  const investmentProductsData = [
+    { title: "Token Lending", description: "Lending out various crypto assets on established decentralized lending platforms to earn interest.", src: "/image_index/Crypto Asset Lending_simple_compose_01jv47c6yeeaz9x6ppxwxh6b1e.png", ctaText: "Learn More", ctaLink: "#", content: () => <p>A portion of funds is allocated to lend out various crypto assets—such as ETH, WBTC, and even stablecoins—on leading decentralized money markets. We primarily use platforms like Aave, Compound, Spark Protocol, and Sonne Finance, which are known for their deep liquidity and strong security track records. By supplying assets to these protocols, we earn interest paid by borrowers, with most platforms employing over-collateralization and real-time liquidation mechanisms to manage risk. When lending volatile assets, we use risk-adjusted allocation caps to protect the portfolio from sudden price swings.</p> },
+    { title: "Stablecoin Lending", description: "Providing USDC liquidity to lending protocols, earning a stable yield from borrowing demand.", src: "/image_index/Stablecoin Lending Platforms_simple_compose_01jv48x4k8eqbss5kba20s5fry.png", ctaText: "Learn More", ctaLink: "#", content: () => <p>USDC is deployed into dedicated stablecoin-focused lending markets across protocols like Maple Finance (for institutional lending), Morpho Blue (an efficient, peer-to-peer layer on top of Aave), Notional Finance (for fixed-rate lending), and IPOR (for interest rate derivatives). These platforms enable us to lend USDC in a way that prioritizes capital preservation while generating predictable, low-volatility returns. The demand for borrowing USDC—especially from arbitrageurs, DAOs, and trading desks—ensures a steady flow of interest income.</p> },
+    { title: "Liquidity Pool Automation", description: "Automated strategies that manage and optimize positions in various decentralized exchange liquidity pools.", src: "/image_index/Automated Liquidity Management_simple_compose_01jv48zmq3edn9yq5jjc7exkkh.png", ctaText: "Learn More", ctaLink: "#", content: () => <p>To enhance returns, we provide liquidity to decentralized exchanges (DEXs) like Uniswap v3, Balancer, Curve, and Trader Joe. These platforms allow us to earn fees from every trade executed within our pools. However, providing liquidity isn't passive—our system uses automation tools such as Arrakis Finance, Gamma Strategies, and Revert Finance to dynamically manage these positions, rebalancing price ranges and minimizing impermanent loss. In some cases, we also earn protocol-native rewards or bribes from governance systems like Convex and Aura.</p> },
+    { title: "Yield-Generating Assets", description: "Investing in tokens or assets that inherently generate yield, such as interest-bearing tokens or liquid staking derivatives.", src: "/image_index/Decentralized Staking Benefits_simple_compose_01jv4976wbfzerzy28x962r1t5.png", ctaText: "Learn More", ctaLink: "#", content: () => <p>We strategically allocate into DeFi-native tokens that inherently generate passive income over time. These include interest-accruing tokens such as aUSDC (Aave), cUSDC (Compound), and stETH, rETH, or sfrxETH—liquid staking derivatives that represent staked ETH across networks like Lido, Rocket Pool, and Frax. These assets grow in value automatically as they collect yield, and in many cases, can also be used as collateral in other DeFi platforms to compound returns further.</p> },
+    { title: "Staking", description: "Participating in network consensus by staking proof-of-stake (PoS) assets to earn staking rewards.", src: "/image_index/DeFi Yield Assets_simple_compose_01jv494z1rf7yrnm29g4tqhtf0.png", ctaText: "Learn More", ctaLink: "#", content: () => <p>We participate in Proof-of-Stake (PoS) network consensus by staking native assets like ETH, MATIC, SOL, and AVAX via decentralized staking providers. We primarily use non-custodial, liquid staking platforms like Lido, Rocket Pool, Marinade Finance, Stader Labs, and EigenLayer. Staking helps secure the underlying networks while offering consistent, chain-native yields—usually in the form of inflationary token rewards. By using liquid staking tokens (LSTs), we can unlock additional layers of utility while the assets continue to earn yield in the background.</p> },
+    { title: "Leveraged Yield Tokens", description: "Utilizing tokenized products that offer leveraged exposure to underlying yield-bearing assets for potentially amplified returns (and risks).", src: "/image_index/Leveraged Yield Strategies_simple_compose_01jv49axjpeeq98k9cgfjnfvb8.png", ctaText: "Learn More", ctaLink: "#", content: () => <p>To boost returns on a portion of the portfolio, we integrate leveraged strategies through protocols like Pendle, Gearbox, and Index Coop. For instance, Pendle allows us to separate and trade future yield, enabling precise control over interest rate exposure. Gearbox, on the other hand, lets us access leverage through composable credit accounts, increasing exposure to yield-bearing strategies while carefully managing risk. These instruments can generate significantly higher returns, but are only used within predefined risk parameters to avoid exposing the broader portfolio to excessive volatility.</p> }
   ];
 
   return (
@@ -595,7 +627,7 @@ export default function LandingPage() {
                 <Link href="/wallets" className="block w-full h-full">
                   <CardContainer className="w-full" containerClassName="!py-4 !w-full">
                     <CardBody className="!w-full !h-[400px]">
-                      <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer bg-zinc-900 border border-zinc-700"
+                      <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer bg-gradient-to-br from-gray-600 via-gray-700 to-gray-900 border border-zinc-700"
                         style={{
                           boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.03)"
                         }}>
@@ -654,7 +686,7 @@ export default function LandingPage() {
                 <div className="cursor-pointer">
                   <CardContainer className="w-full" containerClassName="!py-4 !w-full">
                     <CardBody className="!w-full !h-[400px]">
-                      <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer bg-zinc-900 border border-zinc-700"
+                      <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer bg-gradient-to-br from-gray-600 via-gray-700 to-gray-900 border border-zinc-700"
                         style={{
                           boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.03)"
                         }}>
@@ -720,7 +752,7 @@ export default function LandingPage() {
                 <div className="cursor-pointer">
                   <CardContainer className="w-full" containerClassName="!py-4 !w-full">
                     <CardBody className="!w-full !h-[400px]">
-                      <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer bg-zinc-900 border border-zinc-700"
+                      <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer bg-gradient-to-br from-gray-600 via-gray-700 to-gray-900 border border-zinc-700"
                         style={{
                           boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.03)"
                         }}>
@@ -776,16 +808,16 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* How SkillStreak Works - Timeline Section */}
+        {/* How LockedIn Works - Timeline Section */}
         <section className="bg-black">
           <div className="max-w-7xl mx-auto py-16 md:py-24 px-4 sm:px-6 lg:px-8">
             <h2 className="text-3xl md:text-5xl font-bold mb-4 text-center text-white">
-              How SkillStreak Works
+              How LockedIn Works
             </h2>
             <p className="text-xl text-center text-zinc-400 max-w-3xl mx-auto mb-12 md:mb-16">
-              Follow these simple steps to start learning, earning, and growing with SkillStreak on the Solana blockchain.
+              Follow these simple steps to start learning, earning, and growing with LockedIn on the Solana blockchain.
             </p>
-            <Timeline data={skillStreakTimelineData} className="dark" />
+            <Timeline data={lockedInTimelineData} className="dark" />
           </div>
         </section>
 
@@ -796,9 +828,9 @@ export default function LandingPage() {
               {/* Static black sidebar */}
               <div className="static-black-sidebar-howitworks w-[30%] bg-black text-white p-8 rounded-lg shadow-xl relative z-10 flex flex-col justify-center ">
                 <div className="sidebar-content-howitworks">
-                  <h3 className="text-3xl md:text-4xl font-bold mb-6 text-white">Sharpen Your Skills and Wallet with SkillStreak</h3>
+                  <h3 className="text-3xl md:text-4xl font-bold mb-6 text-white">Sharpen Your Skills and Wallet with LockedIn</h3>
                   <p className="text-zinc-400 mb-8 text-lg leading-relaxed">
-                    Want to learn new skills and make money while doing it? Welcome to SkillStreak, the game-changing app on the Solana blockchain that pays you to grow. With cutting-edge courses, financial rewards, and a vibrant community, SkillStreak turns learning into a habit that fuels your future.
+                    Want to learn new skills and make money while doing it? Welcome to LockedIn, the game-changing app on the Solana blockchain that pays you to grow. With cutting-edge courses, financial rewards, and a vibrant community, LockedIn turns learning into a habit that fuels your future.
                   </p>
                 </div>
               </div>
@@ -819,7 +851,7 @@ export default function LandingPage() {
                           Powered by Solana's Speed
                         </h4>
                         <p className="text-base md:text-lg text-left leading-relaxed text-zinc-700">
-                          Built on Solana, SkillStreak delivers lightning-fast transactions and rock-solid security. Deposit, earn, and bet with zero hassle, knowing your funds are safe on one of the world's most advanced blockchains. Focus on learning, not logistics.
+                          Built on Solana, LockedIn delivers lightning-fast transactions and rock-solid security. Deposit, earn, and bet with zero hassle, knowing your funds are safe on one of the world's most advanced blockchains. Focus on learning, not logistics.
                         </p>
                       </div>
                     </div>
@@ -838,7 +870,7 @@ export default function LandingPage() {
                           Compete, Connect, Cash Out
                         </h4>
                         <p className="text-base md:text-lg text-left leading-relaxed text-zinc-700">
-                          Take learning to the next level with SkillStreak's social betting feature. Challenge friends or global learners to fun wagers on your learning goals—stake SOL and race to finish a course first! Win bragging rights, extra rewards, and build bonds with a community that's as driven as you are.
+                          Take learning to the next level with LockedIn's social betting feature. Challenge friends or global learners to fun wagers on your learning goals—stake USDC and race to finish a course first! Win bragging rights, extra rewards, and build bonds with a community that's as driven as you are.
                         </p>
                       </div>
                     </div>
@@ -857,7 +889,7 @@ export default function LandingPage() {
                           Stick to It, See Results
                         </h4>
                         <p className="text-base md:text-lg text-left leading-relaxed text-zinc-700">
-                          Building habits is hard, but SkillStreak makes it rewarding. Our intuitive tools help you stay consistent with daily streaks and motivational nudges. Track your progress with a sleek dashboard that shows your course completions, earned rewards, and skill milestones. Watch your growth soar as learning becomes second nature.
+                          Building habits is hard, but LockedIn makes it rewarding. Our intuitive tools help you stay consistent with daily streaks and motivational nudges. Track your progress with a sleek dashboard that shows your course completions, earned rewards, and skill milestones. Watch your growth soar as learning becomes second nature.
                         </p>
                       </div>
                     </div>
@@ -876,7 +908,7 @@ export default function LandingPage() {
                           Master Any Skill, Your Way
                         </h4>
                         <p className="text-base md:text-lg text-left leading-relaxed text-zinc-700">
-                          From blockchain coding to creative storytelling, SkillStreak offers a massive range of subjects to spark your curiosity. Our short, engaging courses fit into your busy life, making it easy to build a daily learning habit. Pick a topic, dive in, and level up your expertise in minutes a day.
+                          From blockchain coding to creative storytelling, LockedIn offers a massive range of subjects to spark your curiosity. Our short, engaging courses fit into your busy life, making it easy to build a daily learning habit. Pick a topic, dive in, and level up your expertise in minutes a day.
                         </p>
                       </div>
                     </div>
@@ -895,7 +927,7 @@ export default function LandingPage() {
                           Cash In While You Learn
                         </h4>
                         <p className="text-base md:text-lg text-left leading-relaxed text-zinc-700">
-                          Why just learn when you can earn? Deposit SOL into SkillStreak and watch your funds grow with attractive yields as you study. Every course you complete brings you closer to financial freedom. It's simple: the more you learn, the more you earn. Start stacking knowledge and wealth today!
+                          Why just learn when you can earn? Deposit USDC into LockedIn and watch your funds grow with attractive yields as you study. Every course you complete brings you closer to financial freedom. It's simple: the more you learn, the more you earn. Start stacking knowledge and wealth today!
                         </p>
                       </div>
                     </div>
@@ -904,6 +936,151 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* How We Invest Your Funds Section - Updated with Expandable Cards */}
+        <section className="py-16 md:py-24 bg-black text-white">
+          <div className="container mx-auto px-4">
+            <h2 className="text-3xl md:text-4xl font-bold mb-10 text-center">
+              How We Invest Your Funds
+            </h2>
+            <p className="text-lg md:text-xl text-zinc-400 mb-12 max-w-3xl mx-auto text-center">
+              To generate yield, your deposited USDC is strategically allocated across a diversified portfolio of on-chain products. Our system continuously monitors and optimizes these positions to maximize returns while managing risk. Here are some of the core strategies we employ:
+            </p>
+            
+            <AnimatePresence>
+              {activeCard && typeof activeCard === "object" && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  className="fixed inset-0 bg-black/20 h-full w-full z-10"
+                />
+              )}
+            </AnimatePresence>
+            <AnimatePresence>
+              {activeCard && typeof activeCard === "object" ? (
+                <div className="fixed inset-0 grid place-items-center z-[100]">
+                  <motion.button
+                    key={`button-${activeCard.title}-${expandableCardId}`}
+                    layout
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0, transition: { duration: 0.05 } }}
+                    className="flex absolute top-2 right-2 lg:hidden items-center justify-center bg-white rounded-full h-6 w-6"
+                    onClick={() => setActiveCard(null)}
+                  >
+                    <DynamicCloseIcon />
+                  </motion.button>
+                  <motion.div
+                    layoutId={`card-${activeCard.title}-${expandableCardId}`}
+                    ref={expandableCardRef}
+                    className="w-full max-w-[500px] h-full md:h-fit md:max-h-[90%] flex flex-col bg-white dark:bg-neutral-900 sm:rounded-3xl overflow-hidden"
+                  >
+                    <motion.div layoutId={`image-${activeCard.title}-${expandableCardId}`}>
+                      <img
+                        width={200}
+                        height={200}
+                        src={activeCard.src}
+                        alt={activeCard.title}
+                        className="w-full h-80 lg:h-80 sm:rounded-tr-lg sm:rounded-tl-lg object-cover object-top"
+                      />
+                    </motion.div>
+                    <div>
+                      <div className="flex justify-between items-start p-4">
+                        <div className="">
+                          <motion.h3
+                            layoutId={`title-${activeCard.title}-${expandableCardId}`}
+                            className="font-medium text-neutral-700 dark:text-neutral-200 text-base"
+                          >
+                            {activeCard.title}
+                          </motion.h3>
+                          <motion.p
+                            layoutId={`description-${activeCard.title}-${expandableCardId}`}
+                            className="text-neutral-600 dark:text-neutral-400 text-base"
+                          >
+                            {activeCard.description}
+                          </motion.p>
+                        </div>
+                        <motion.button
+                          layoutId={`button-${activeCard.title}-${expandableCardId}`}
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          onClick={() => { 
+                            if (activeCard.ctaLink && activeCard.ctaLink !== '#') { 
+                              window.open(activeCard.ctaLink, '_blank'); 
+                            }
+                          }}
+                          className="px-4 py-3 text-sm rounded-full font-bold bg-green-500 text-white"
+                        >
+                          {activeCard.ctaText}
+                        </motion.button>
+                      </div>
+                      <div className="pt-4 relative px-4">
+                        <motion.div
+                          layout
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          className="text-neutral-600 text-xs md:text-sm lg:text-base h-40 md:h-fit pb-10 flex flex-col items-start gap-4 overflow-auto dark:text-neutral-400 [mask:linear-gradient(to_bottom,white,white,transparent)] [scrollbar-width:none] [-ms-overflow-style:none] [-webkit-overflow-scrolling:touch]"
+                        >
+                          {typeof activeCard.content === "function"
+                            ? activeCard.content()
+                            : activeCard.content}
+                        </motion.div>
+                      </div>
+                    </div>
+                  </motion.div>
+                </div>
+              ) : null}
+            </AnimatePresence>
+            <ul className="max-w-4xl mx-auto w-full flex flex-col gap-6">
+              {investmentProductsData.map((card) => (
+                <motion.div
+                  layoutId={`card-${card.title}-${expandableCardId}`}
+                  key={card.title}
+                  className="p-6 flex flex-row items-center justify-between hover:bg-zinc-800/50 dark:hover:bg-neutral-800 rounded-xl"
+                >
+                  <div className="flex flex-row items-center flex-grow cursor-pointer mr-6" onClick={() => setActiveCard(card)}>
+                    <motion.div layoutId={`image-${card.title}-${expandableCardId}`}>
+                      <img
+                        width={80}
+                        height={80}
+                        src={card.src}
+                        alt={card.title}
+                        className="h-20 w-20 rounded-md object-cover mr-6 flex-shrink-0"
+                      />
+                    </motion.div>
+                    <div className="flex flex-col flex-1">
+                      <motion.h3
+                        layoutId={`title-${card.title}-${expandableCardId}`}
+                        className="font-bold text-white text-left text-lg"
+                      >
+                        {card.title}
+                      </motion.h3>
+                      <motion.p
+                        layoutId={`description-${card.title}-${expandableCardId}`}
+                        className="text-white text-left text-base"
+                      >
+                        {card.description}
+                      </motion.p>
+                    </div>
+                  </div>
+                  <motion.button
+                    layoutId={`button-${card.title}-${expandableCardId}`}
+                    className="px-5 py-2.5 text-base rounded-full font-bold bg-zinc-700 hover:bg-green-500 text-white hover:text-white ml-auto flex-shrink-0"
+                    onClick={(e) => { 
+                      e.stopPropagation(); 
+                      setActiveCard(card); 
+                    }}
+                  >
+                    {card.ctaText}
+                  </motion.button>
+                </motion.div>
+              ))}
+            </ul>
           </div>
         </section>
 
@@ -1057,3 +1234,28 @@ export default function LandingPage() {
     </>
   );
 }
+
+// At the end of the LandingPage component, or in a shared utility file if used elsewhere:
+const DynamicCloseIcon = () => {
+  return (
+    <motion.svg
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0, transition: { duration: 0.05 } }}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-4 w-4 text-black"
+    >
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M18 6l-12 12" />
+      <path d="M6 6l12 12" />
+    </motion.svg>
+  );
+};
