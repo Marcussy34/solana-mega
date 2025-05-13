@@ -1,80 +1,133 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/router';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useConnection, useWallet } from '@solana/wallet-adapter-react';
+import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { PublicKey, SystemProgram } from '@solana/web3.js';
+import { Program, AnchorProvider } from '@coral-xyz/anchor';
+import idl from '../../../lib/idl/skillstreak_program.json';
+
+// Default styles that can be overridden by your app
+require('@solana/wallet-adapter-react-ui/styles.css');
+
+// Constants
+console.log("Imported IDL:", idl);
+
+let PROGRAM_ID_STRING;
+if (idl && idl.address) {
+    PROGRAM_ID_STRING = idl.address;
+    console.log("Using Program ID from idl.address:", PROGRAM_ID_STRING);
+} else {
+    console.error("CRITICAL: IDL file is missing the main 'address' field. Please check your IDL file and build process.");
+    // Fallback to our known program ID
+    PROGRAM_ID_STRING = '7LeARRwbauXQ1W4Cr22ZEyPUVP5wHqYijXvkvPaVpguP';
+}
+
+const PROGRAM_ID = new PublicKey(PROGRAM_ID_STRING);
 
 const CongratsPage = () => {
   const router = useRouter();
+  const { connection } = useConnection();
+  const { publicKey, wallet } = useWallet();
+  const [program, setProgram] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showPopup, setShowPopup] = useState(false);
 
-  const handleContinue = () => {
-    router.push('/course/english?lesson1=complete');
-  };
-
-  // Confetti effect
+  // Initialize program
   useEffect(() => {
-    let timeoutId;
-    let confettiInstance;
-
-    const cleanup = () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
+    const initializeProgram = async () => {
+      if (!publicKey || !connection || !wallet?.adapter || !idl) {
+        setProgram(null);
+        return;
       }
-      // Force cleanup any existing confetti
-      if (typeof window !== 'undefined') {
-        const canvasElements = document.querySelectorAll('canvas');
-        canvasElements.forEach(canvas => {
-          if (canvas.parentNode && canvas.parentNode.tagName !== 'CANVAS') {
-            canvas.parentNode.removeChild(canvas);
-          }
-        });
+
+      try {
+        // Validate IDL structure
+        if (!idl.accounts || !idl.instructions) {
+          console.error("Invalid IDL structure - missing required fields");
+          setProgram(null);
+          return;
+        }
+
+        const provider = new AnchorProvider(connection, wallet.adapter, { commitment: "processed" });
+        const prog = new Program(idl, provider);
+        
+        // Test if program is properly initialized
+        if (!prog.programId) {
+          throw new Error("Program ID not properly initialized");
+        }
+        
+        setProgram(prog);
+        console.log('Program initialized successfully with ID:', prog.programId.toString());
+      } catch (error) {
+        console.log('Error initializing program:', error.message);
+        console.error("Program Initialization Error:", error);
+        setProgram(null);
       }
     };
 
-    // Clean up any existing confetti first
-    cleanup();
+    initializeProgram();
+  }, [publicKey, connection, wallet, idl]);
+
+  const handleContinue = async () => {
+    if (!program || !publicKey) {
+      console.error("Program or wallet not connected");
+      return;
+    }
     
-    import('canvas-confetti').then((confettiModule) => {
-      const confettiCannon = confettiModule.default;
-      confettiInstance = confettiCannon;
-      
-      // Initial center burst
-      confettiCannon({
-        particleCount: 100,
-        spread: 70,
-        origin: { y: 0.6 },
-        disableForReducedMotion: true
+    setIsLoading(true);
+    try {
+      // Derive user state PDA
+      const [userStatePDA] = PublicKey.findProgramAddressSync(
+        [Buffer.from("user"), publicKey.toBuffer()],
+        program.programId
+      );
+
+      console.log("Attempting to record task with:", {
+        userPDA: userStatePDA.toString(),
+        userPublicKey: publicKey.toString(),
+        programId: program.programId.toString()
       });
 
-      // Two angled bursts after a short delay
-      timeoutId = setTimeout(() => {
-        // Left burst
-        confettiCannon({
-          particleCount: 50,
-          angle: 60,
-          spread: 55,
-          origin: { x: 0 },
-          disableForReducedMotion: true
-        });
+      // Call record_task instruction
+      const tx = await program.methods
+        .recordTask()
+        .accounts({
+          user: publicKey,
+          userState: userStatePDA,
+          systemProgram: SystemProgram.programId,
+        })
+        .rpc();
 
-        // Right burst
-        confettiCannon({
-          particleCount: 50,
-          angle: 120,
-          spread: 55,
-          origin: { x: 1 },
-          disableForReducedMotion: true
-        });
-      }, 300);
-    });
+      console.log("Task completed successfully!");
+      console.log("Transaction signature:", tx);
+      
+      // Show success popup
+      setShowPopup(true);
+      
+      // Wait for 2 seconds before redirecting
+      setTimeout(() => {
+        router.push('/course/english?lesson1=complete');
+      }, 2000);
 
-    // Return cleanup function
-    return cleanup;
-  }, []);
+    } catch (error) {
+      console.error("Error completing task:", error);
+      alert("Failed to record task completion. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-[#0A192F] via-[#112240] to-[#1A365D] text-white p-8 relative overflow-hidden">
       {/* Background glow effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 via-blue-500/10 to-purple-500/10 animate-gradient-shift" />
       
+      {/* Wallet connect button */}
+      <div className="absolute top-4 right-4 z-50">
+        <WalletMultiButton />
+      </div>
+
       {/* Content container */}
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
@@ -90,8 +143,8 @@ const CongratsPage = () => {
           className="mb-8"
         >
           <div className="w-24 h-24 mx-auto bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center shadow-lg shadow-yellow-500/50">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14 text-white" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 1c-1.828 0-3.623.149-5.371.435a.75.75 0 00-.629.74v.387c-.827.157-1.642.345-2.445.564a.75.75 0 00-.552.698V5c0 2.056 1.668 3.723 3.724 3.723h.476A5.228 5.228 0 009 13.5a5.228 5.228 0 003.797-4.777h.476C15.332 8.723 17 7.056 17 5v-1.176a.75.75 0 00-.552-.698A19.548 19.548 0 0014.003 2.56v-.387a.75.75 0 00-.629-.74A24.016 24.016 0 0010 1zm5.25 6.662V5.187a18.05 18.05 0 00-10.5 0v2.475C5.5 8.472 6.528 9.5 7.77 9.5h4.46c1.242 0 2.27-1.028 2.27-2.838z" clipRule="evenodd" />
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-14 w-14 text-white" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14zM7 10h10v2H7zm0 4h10v2H7z"/>
             </svg>
           </div>
         </motion.div>
@@ -135,14 +188,49 @@ const CongratsPage = () => {
         >
           <button 
             onClick={handleContinue}
-            className="px-8 py-4 rounded-xl bg-gradient-to-r from-green-500 to-blue-500 text-white font-medium 
+            disabled={isLoading || !publicKey || !program}
+            className={`px-8 py-4 rounded-xl bg-gradient-to-r from-green-500 to-blue-500 text-white font-medium 
                      hover:from-green-600 hover:to-blue-600 transform hover:scale-105 transition-all duration-200
-                     shadow-lg shadow-blue-500/25 hover:shadow-blue-500/50"
+                     shadow-lg shadow-blue-500/25 hover:shadow-blue-500/50 ${(isLoading || !publicKey || !program) ? 'opacity-50 cursor-not-allowed' : ''}`}
           >
-            Continue Your Journey
+            {isLoading ? 'Recording Progress...' : 'Mark your progress'}
           </button>
+          {!publicKey && (
+            <p className="mt-4 text-sm text-zinc-400">Please connect your wallet to mark progress</p>
+          )}
+          {publicKey && !program && (
+            <p className="mt-4 text-sm text-zinc-400">Initializing program...</p>
+          )}
         </motion.div>
       </motion.div>
+
+      {/* Enhanced Success Popup with Blurred Background */}
+      <AnimatePresence>
+        {showPopup && (
+          <motion.div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-md"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3 }}
+          >
+            <motion.div
+              className="bg-gradient-to-br from-green-500 via-teal-500 to-blue-600 text-white px-10 py-6 rounded-xl shadow-2xl flex flex-col items-center space-y-4 text-center"
+              initial={{ opacity: 0, scale: 0.7, y: 50 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.7, y: 50 }}
+              transition={{ type: "spring", stiffness: 400, damping: 25 }}
+            >
+              {/* Checkmark Icon */}
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <p className="text-2xl font-semibold">Progress Marked!</p>
+              <p className="text-sm opacity-90">Your achievement has been recorded.</p>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Animated circles in background */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
