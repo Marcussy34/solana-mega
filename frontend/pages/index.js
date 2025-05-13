@@ -317,28 +317,6 @@ export default function LandingPage() {
     },
   ];
 
-  // State and ref for Expandable Cards
-  const [activeCard, setActiveCard] = useState(null);
-  const expandableCardRef = useRef(null);
-  const expandableCardId = useId();
-
-  useEffect(() => {
-    function onKeyDown(event) {
-      if (event.key === "Escape") {
-        setActiveCard(null);
-      }
-    }
-    if (activeCard && typeof activeCard === "object") {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "auto";
-    }
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [activeCard]);
-
-  useOutsideClick(expandableCardRef, () => setActiveCard(null));
-
   const investmentProductsData = [
     { title: "Token Lending", description: "Lending out various crypto assets on established decentralized lending platforms to earn interest.", src: "/image_index/Crypto Asset Lending_simple_compose_01jv47c6yeeaz9x6ppxwxh6b1e.png", ctaText: "Learn More", ctaLink: "#", content: () => <p>A portion of funds is allocated to lend out various crypto assets—such as ETH, WBTC, and even stablecoins—on leading decentralized money markets. We primarily use platforms like Aave, Compound, Spark Protocol, and Sonne Finance, which are known for their deep liquidity and strong security track records. By supplying assets to these protocols, we earn interest paid by borrowers, with most platforms employing over-collateralization and real-time liquidation mechanisms to manage risk. When lending volatile assets, we use risk-adjusted allocation caps to protect the portfolio from sudden price swings.</p> },
     { title: "Stablecoin Lending", description: "Providing USDC liquidity to lending protocols, earning a stable yield from borrowing demand.", src: "/image_index/Stablecoin Lending Platforms_simple_compose_01jv48x4k8eqbss5kba20s5fry.png", ctaText: "Learn More", ctaLink: "#", content: () => <p>USDC is deployed into dedicated stablecoin-focused lending markets across protocols like Maple Finance (for institutional lending), Morpho Blue (an efficient, peer-to-peer layer on top of Aave), Notional Finance (for fixed-rate lending), and IPOR (for interest rate derivatives). These platforms enable us to lend USDC in a way that prioritizes capital preservation while generating predictable, low-volatility returns. The demand for borrowing USDC—especially from arbitrageurs, DAOs, and trading desks—ensures a steady flow of interest income.</p> },
@@ -347,6 +325,52 @@ export default function LandingPage() {
     { title: "Staking", description: "Participating in network consensus by staking proof-of-stake (PoS) assets to earn staking rewards.", src: "/image_index/DeFi Yield Assets_simple_compose_01jv494z1rf7yrnm29g4tqhtf0.png", ctaText: "Learn More", ctaLink: "#", content: () => <p>We participate in Proof-of-Stake (PoS) network consensus by staking native assets like ETH, MATIC, SOL, and AVAX via decentralized staking providers. We primarily use non-custodial, liquid staking platforms like Lido, Rocket Pool, Marinade Finance, Stader Labs, and EigenLayer. Staking helps secure the underlying networks while offering consistent, chain-native yields—usually in the form of inflationary token rewards. By using liquid staking tokens (LSTs), we can unlock additional layers of utility while the assets continue to earn yield in the background.</p> },
     { title: "Leveraged Yield Tokens", description: "Utilizing tokenized products that offer leveraged exposure to underlying yield-bearing assets for potentially amplified returns (and risks).", src: "/image_index/Leveraged Yield Strategies_simple_compose_01jv49axjpeeq98k9cgfjnfvb8.png", ctaText: "Learn More", ctaLink: "#", content: () => <p>To boost returns on a portion of the portfolio, we integrate leveraged strategies through protocols like Pendle, Gearbox, and Index Coop. For instance, Pendle allows us to separate and trade future yield, enabling precise control over interest rate exposure. Gearbox, on the other hand, lets us access leverage through composable credit accounts, increasing exposure to yield-bearing strategies while carefully managing risk. These instruments can generate significantly higher returns, but are only used within predefined risk parameters to avoid exposing the broader portfolio to excessive volatility.</p> }
   ];
+
+  // New HorizontalScroller component definition
+  const HorizontalScroller = ({ items, speed = 50000 }) => {
+    if (!items || items.length === 0) {
+      return null; // Or some placeholder if items are empty
+    }
+    const duplicatedItems = [...items, ...items];
+
+    return (
+      <div className="w-full overflow-hidden relative" style={{ maskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)' }}>
+        <motion.div
+          className="flex"
+          animate={{
+            x: ['0%', `-${100 * (items.length / duplicatedItems.length)}%`],
+          }}
+          transition={{
+            ease: 'linear',
+            duration: speed / 1000, // Duration for one full cycle of original items
+            repeat: Infinity,
+          }}
+        >
+          {duplicatedItems.map((item, index) => (
+            <div key={`${item.title}-${index}`} className="flex-shrink-0 w-[320px] md:w-[380px] p-3"> {/* Card width and padding */}
+              <div className="bg-zinc-800 p-5 rounded-xl shadow-xl h-full flex flex-col justify-between transition-all duration-300 hover:bg-zinc-700/80">
+                <div>
+                  <img 
+                    src={item.src} 
+                    alt={item.title} 
+                    className="w-full h-48 object-cover rounded-lg mb-4" // Image styling
+                  />
+                  <h3 className="text-xl font-bold text-white mb-2 truncate">{item.title}</h3> {/* Title styling */}
+                  <p className="text-sm text-zinc-300 mb-4 h-16 overflow-hidden" style={{ display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical' }}>{item.description}</p> {/* Description with line clamp */}
+                </div>
+                <button
+                  className="mt-4 px-5 py-2.5 text-sm rounded-full font-semibold bg-green-500 text-white hover:bg-green-600 transition-colors self-start focus:outline-none focus:ring-2 focus:ring-green-400 focus:ring-opacity-75"
+                  // onClick behavior can be added later if cards need to be interactive
+                >
+                  Learn More
+                </button>
+              </div>
+            </div>
+          ))}
+        </motion.div>
+      </div>
+    );
+  };
 
   return (
     <>
@@ -603,14 +627,26 @@ export default function LandingPage() {
           </div>
           
           {/* Content */}
-          <div className="relative z-10 container mx-auto px-4 text-left">
-            <div className="max-w-2xl">
-              <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 text-white font-dashhorizon">
-                LockedIn
-              </h1>
-              <p className="text-xl md:text-2xl mb-8 text-zinc-300 font-dashhorizon">
-                Learn, Earn & Build Habits on Solana. Master new skills while earning yield on your capital.
-              </p>
+          <div className="relative z-10 container mx-auto px-4">
+            <div className="flex flex-col md:flex-row items-center justify-between min-h-[calc(100vh-5rem)] pt-16 md:pt-0 gap-8">
+              {/* Text Content Block */}
+              <div className="md:w-1/2 lg:w-3/5 max-w-2xl text-left">
+                <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 text-white font-dashhorizon">
+                  LockedIn
+                </h1>
+                <p className="text-xl md:text-2xl mb-8 text-zinc-300 font-dashhorizon">
+                  Learn, Earn & Build Habits on Solana. Master new skills while earning yield on your capital.
+                </p>
+              </div>
+              {/* Phone Image Block */}
+              <div className="md:w-1/2 lg:w-2/5 flex justify-center md:justify-end mt-8 md:mt-0">
+                <img 
+                  src="/placeholder-phone.png" 
+                  alt="App Preview on Phone" 
+                  className="w-auto h-[350px] sm:h-[400px] md:h-[450px] lg:h-[500px] object-contain drop-shadow-2xl"
+                  style={{ filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.3))' }}
+                />
+              </div>
             </div>
           </div>
         </section>
@@ -809,7 +845,7 @@ export default function LandingPage() {
         </section>
 
         {/* How LockedIn Works - Timeline Section */}
-        <section className="bg-black">
+        {/* <section className="bg-black">
           <div className="max-w-7xl mx-auto py-16 md:py-24 px-4 sm:px-6 lg:px-8">
             <h2 className="text-3xl md:text-5xl font-bold mb-4 text-center text-white">
               How LockedIn Works
@@ -819,27 +855,27 @@ export default function LandingPage() {
             </p>
             <Timeline data={lockedInTimelineData} className="dark" />
           </div>
-        </section>
+        </section> */}
 
         {/* Interactive Panels Section (Formerly How It Works) */}
-        <section id="panels-section-howitworks" className="min-h-screen bg-black py-12 md:py-20 relative">
+        {/* <section id="panels-section-howitworks" className="min-h-screen bg-black py-12 md:py-20 relative">
           <div className="container mx-auto px-4">
             <div className="two-column-layout-howitworks h-[100vh] flex w-full">
               {/* Static black sidebar */}
-              <div className="static-black-sidebar-howitworks w-[30%] bg-black text-white p-8 rounded-lg shadow-xl relative z-10 flex flex-col justify-center ">
+              {/* <div className="static-black-sidebar-howitworks w-[30%] bg-black text-white p-8 rounded-lg shadow-xl relative z-10 flex flex-col justify-center ">
                 <div className="sidebar-content-howitworks">
                   <h3 className="text-3xl md:text-4xl font-bold mb-6 text-white">Sharpen Your Skills and Wallet with LockedIn</h3>
                   <p className="text-zinc-400 mb-8 text-lg leading-relaxed">
                     Want to learn new skills and make money while doing it? Welcome to LockedIn, the game-changing app on the Solana blockchain that pays you to grow. With cutting-edge courses, financial rewards, and a vibrant community, LockedIn turns learning into a habit that fuels your future.
                   </p>
                 </div>
-              </div>
+              </div> */}
               
               {/* Scrollable colored panels */}
-              <div className="scrollable-panels-howitworks w-[70%] h-[100vh] overflow-hidden relative">
-                <div id="colored-panels-container-howitworks" className="relative h-full w-full">
+              {/* <div className="scrollable-panels-howitworks w-[70%] h-[100vh] overflow-hidden relative">
+                <div id="colored-panels-container-howitworks" className="relative h-full w-full"> */}
                   {/* Panel 1 */}
-                  <div id="panel-howitworks-1" className="colored-panel-howitworks absolute w-[70%] h-[65%] top-0 right-[5%] flex flex-col overflow-hidden rounded-xl shadow-2xl bg-zinc-100 text-black">
+                  {/* <div id="panel-howitworks-1" className="colored-panel-howitworks absolute w-[70%] h-[65%] top-0 right-[5%] flex flex-col overflow-hidden rounded-xl shadow-2xl bg-zinc-100 text-black">
                     <div className="panel-content-howitworks w-full h-full flex flex-col justify-between p-6 md:p-8">
                       <div className="flex justify-end">
                         <div className="w-14 h-14 md:w-16 md:h-16 bg-zinc-200 rounded-lg flex items-center justify-center text-2xl md:text-3xl text-zinc-600">
@@ -855,10 +891,10 @@ export default function LandingPage() {
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Panel 2 */}
-                  <div id="panel-howitworks-2" className="colored-panel-howitworks absolute w-[70%] h-[65%] top-0 right-[5%] flex flex-col overflow-hidden rounded-xl shadow-2xl bg-zinc-100 text-black">
+                  {/* <div id="panel-howitworks-2" className="colored-panel-howitworks absolute w-[70%] h-[65%] top-0 right-[5%] flex flex-col overflow-hidden rounded-xl shadow-2xl bg-zinc-100 text-black">
                     <div className="panel-content-howitworks w-full h-full flex flex-col justify-between p-6 md:p-8">
                       <div className="flex justify-end">
                         <div className="w-14 h-14 md:w-16 md:h-16 bg-zinc-200 rounded-lg flex items-center justify-center text-2xl md:text-3xl text-zinc-600">
@@ -874,10 +910,10 @@ export default function LandingPage() {
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Panel 3 */}
-                  <div id="panel-howitworks-3" className="colored-panel-howitworks absolute w-[70%] h-[65%] top-0 right-[5%] flex flex-col overflow-hidden rounded-xl shadow-2xl bg-zinc-100 text-black">
+                  {/* <div id="panel-howitworks-3" className="colored-panel-howitworks absolute w-[70%] h-[65%] top-0 right-[5%] flex flex-col overflow-hidden rounded-xl shadow-2xl bg-zinc-100 text-black">
                     <div className="panel-content-howitworks w-full h-full flex flex-col justify-between p-6 md:p-8">
                       <div className="flex justify-end">
                         <div className="w-14 h-14 md:w-16 md:h-16 bg-zinc-200 rounded-lg flex items-center justify-center text-2xl md:text-3xl text-zinc-600">
@@ -893,10 +929,10 @@ export default function LandingPage() {
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Panel 4 */}
-                  <div id="panel-howitworks-4" className="colored-panel-howitworks absolute w-[70%] h-[65%] top-0 right-[5%] flex flex-col overflow-hidden rounded-xl shadow-2xl bg-zinc-100 text-black">
+                  {/* <div id="panel-howitworks-4" className="colored-panel-howitworks absolute w-[70%] h-[65%] top-0 right-[5%] flex flex-col overflow-hidden rounded-xl shadow-2xl bg-zinc-100 text-black">
                     <div className="panel-content-howitworks w-full h-full flex flex-col justify-between p-6 md:p-8">
                       <div className="flex justify-end">
                         <div className="w-14 h-14 md:w-16 md:h-16 bg-zinc-200 rounded-lg flex items-center justify-center text-2xl md:text-3xl text-zinc-600">
@@ -912,10 +948,10 @@ export default function LandingPage() {
                         </p>
                       </div>
                     </div>
-                  </div>
+                  </div> */}
 
                   {/* Panel 5 */}
-                  <div id="panel-howitworks-5" className="colored-panel-howitworks absolute w-[70%] h-[65%] top-0 right-[5%] flex flex-col overflow-hidden rounded-xl shadow-2xl bg-zinc-100 text-black">
+                  {/* <div id="panel-howitworks-5" className="colored-panel-howitworks absolute w-[70%] h-[65%] top-0 right-[5%] flex flex-col overflow-hidden rounded-xl shadow-2xl bg-zinc-100 text-black">
                     <div className="panel-content-howitworks w-full h-full flex flex-col justify-between p-6 md:p-8">
                       <div className="flex justify-end">
                         <div className="w-14 h-14 md:w-16 md:h-16 bg-zinc-200 rounded-lg flex items-center justify-center text-2xl md:text-3xl text-zinc-600">
@@ -936,10 +972,11 @@ export default function LandingPage() {
                 </div>
               </div>
             </div>
-          </div>
-        </section>
+          </div> */
+        // {/* // </section> */} */ 
+        }
 
-        {/* How We Invest Your Funds Section - Updated with Expandable Cards */}
+        {/* How We Invest Your Funds Section - Updated with Horizontal Scroller */}
         <section className="py-16 md:py-24 bg-black text-white">
           <div className="container mx-auto px-4">
             <h2 className="text-3xl md:text-4xl font-bold mb-10 text-center">
@@ -948,139 +985,7 @@ export default function LandingPage() {
             <p className="text-lg md:text-xl text-zinc-400 mb-12 max-w-3xl mx-auto text-center">
               To generate yield, your deposited USDC is strategically allocated across a diversified portfolio of on-chain products. Our system continuously monitors and optimizes these positions to maximize returns while managing risk. Here are some of the core strategies we employ:
             </p>
-            
-            <AnimatePresence>
-              {activeCard && typeof activeCard === "object" && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  className="fixed inset-0 bg-black/20 h-full w-full z-10"
-                />
-              )}
-            </AnimatePresence>
-            <AnimatePresence>
-              {activeCard && typeof activeCard === "object" ? (
-                <div className="fixed inset-0 grid place-items-center z-[100]">
-                  <motion.button
-                    key={`button-${activeCard.title}-${expandableCardId}`}
-                    layout
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, transition: { duration: 0.05 } }}
-                    className="flex absolute top-2 right-2 lg:hidden items-center justify-center bg-white rounded-full h-6 w-6"
-                    onClick={() => setActiveCard(null)}
-                  >
-                    <DynamicCloseIcon />
-                  </motion.button>
-                  <motion.div
-                    layoutId={`card-${activeCard.title}-${expandableCardId}`}
-                    ref={expandableCardRef}
-                    className="w-full max-w-[500px] h-full md:h-fit md:max-h-[90%] flex flex-col bg-white dark:bg-neutral-900 sm:rounded-3xl overflow-hidden"
-                  >
-                    <motion.div layoutId={`image-${activeCard.title}-${expandableCardId}`}>
-                      <img
-                        width={200}
-                        height={200}
-                        src={activeCard.src}
-                        alt={activeCard.title}
-                        className="w-full h-80 lg:h-80 sm:rounded-tr-lg sm:rounded-tl-lg object-cover object-top"
-                      />
-                    </motion.div>
-                    <div>
-                      <div className="flex justify-between items-start p-4">
-                        <div className="">
-                          <motion.h3
-                            layoutId={`title-${activeCard.title}-${expandableCardId}`}
-                            className="font-medium text-neutral-700 dark:text-neutral-200 text-base"
-                          >
-                            {activeCard.title}
-                          </motion.h3>
-                          <motion.p
-                            layoutId={`description-${activeCard.title}-${expandableCardId}`}
-                            className="text-neutral-600 dark:text-neutral-400 text-base"
-                          >
-                            {activeCard.description}
-                          </motion.p>
-                        </div>
-                        <motion.button
-                          layoutId={`button-${activeCard.title}-${expandableCardId}`}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          onClick={() => { 
-                            if (activeCard.ctaLink && activeCard.ctaLink !== '#') { 
-                              window.open(activeCard.ctaLink, '_blank'); 
-                            }
-                          }}
-                          className="px-4 py-3 text-sm rounded-full font-bold bg-green-500 text-white"
-                        >
-                          {activeCard.ctaText}
-                        </motion.button>
-                      </div>
-                      <div className="pt-4 relative px-4">
-                        <motion.div
-                          layout
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          exit={{ opacity: 0 }}
-                          className="text-neutral-600 text-xs md:text-sm lg:text-base h-40 md:h-fit pb-10 flex flex-col items-start gap-4 overflow-auto dark:text-neutral-400 [mask:linear-gradient(to_bottom,white,white,transparent)] [scrollbar-width:none] [-ms-overflow-style:none] [-webkit-overflow-scrolling:touch]"
-                        >
-                          {typeof activeCard.content === "function"
-                            ? activeCard.content()
-                            : activeCard.content}
-                        </motion.div>
-                      </div>
-                    </div>
-                  </motion.div>
-                </div>
-              ) : null}
-            </AnimatePresence>
-            <ul className="max-w-4xl mx-auto w-full flex flex-col gap-6">
-              {investmentProductsData.map((card) => (
-                <motion.div
-                  layoutId={`card-${card.title}-${expandableCardId}`}
-                  key={card.title}
-                  className="p-6 flex flex-row items-center justify-between hover:bg-zinc-800/50 dark:hover:bg-neutral-800 rounded-xl"
-                >
-                  <div className="flex flex-row items-center flex-grow cursor-pointer mr-6" onClick={() => setActiveCard(card)}>
-                    <motion.div layoutId={`image-${card.title}-${expandableCardId}`}>
-                      <img
-                        width={80}
-                        height={80}
-                        src={card.src}
-                        alt={card.title}
-                        className="h-20 w-20 rounded-md object-cover mr-6 flex-shrink-0"
-                      />
-                    </motion.div>
-                    <div className="flex flex-col flex-1">
-                      <motion.h3
-                        layoutId={`title-${card.title}-${expandableCardId}`}
-                        className="font-bold text-white text-left text-lg"
-                      >
-                        {card.title}
-                      </motion.h3>
-                      <motion.p
-                        layoutId={`description-${card.title}-${expandableCardId}`}
-                        className="text-white text-left text-base"
-                      >
-                        {card.description}
-                      </motion.p>
-                    </div>
-                  </div>
-                  <motion.button
-                    layoutId={`button-${card.title}-${expandableCardId}`}
-                    className="px-5 py-2.5 text-base rounded-full font-bold bg-zinc-700 hover:bg-green-500 text-white hover:text-white ml-auto flex-shrink-0"
-                    onClick={(e) => { 
-                      e.stopPropagation(); 
-                      setActiveCard(card); 
-                    }}
-                  >
-                    {card.ctaText}
-                  </motion.button>
-                </motion.div>
-              ))}
-            </ul>
+            <HorizontalScroller items={investmentProductsData} speed={25000} /> {/* Using the new scroller */}
           </div>
         </section>
 
@@ -1150,112 +1055,7 @@ export default function LandingPage() {
       </div>
 
       {/* Styles for the How It Works Panels - Scoped */}
-      <style jsx>{`
-        #panels-section-howitworks {
-          /* Base styles */
-        }
-
-        .two-column-layout-howitworks {
-          /* Flex handled by Tailwind */
-        }
-        
-        .static-black-sidebar-howitworks {
-           /* Dimensions/Layout handled by Tailwind */
-           /* Background/Text color handled by Tailwind */
-        }
-        
-        .sidebar-content-howitworks {
-           /* Padding handled by Tailwind */
-        }
-                
-        .panel-indicators-howitworks .indicator-howitworks.active {
-          color: white; /* Active color */
-        }
-
-        .panel-indicators-howitworks .indicator-howitworks .indicator-dot {
-          transition: background-color 0.3s ease;
-          /* Default/active color set by Tailwind classes */
-        }
-        
-        .scrollable-panels-howitworks {
-           /* Dimensions/Layout handled by Tailwind */
-        }
-        
-        #colored-panels-container-howitworks {
-           /* Dimensions/Layout handled by Tailwind */
-        }
-        
-        .colored-panel-howitworks {
-          will-change: transform, opacity; /* Optimization for GSAP */
-          /* Background/Text/Shadow handled by Tailwind */
-        }
-        
-        .panel-content-howitworks {
-           /* Padding handled by Tailwind */
-        }
-                
-        .panels-navigation-howitworks {
-          /* Layout handled by Tailwind if needed */
-        }
-        
-        .nav-panel-howitworks a {
-          text-decoration: none;
-          color: inherit; 
-        }
-
-        html {
-          scroll-behavior: smooth;
-        }
-
-        /* Responsive adjustments */
-        @media screen and (max-width: 768px) {
-          .two-column-layout-howitworks {
-            flex-direction: column;
-            height: auto; 
-          }
-          
-          .static-black-sidebar-howitworks {
-            width: 100%;
-            height: auto; 
-            margin-bottom: 2rem; 
-          }
-          
-          .scrollable-panels-howitworks {
-            width: 100%;
-            height: 70vh; 
-          }
-
-          .colored-panel-howitworks {
-             width: 90%;
-             right: 2%; 
-          }
-        }
-      `}</style>
+      {/* <style jsx>{` ... `}</style> */}
     </>
   );
 }
-
-// At the end of the LandingPage component, or in a shared utility file if used elsewhere:
-const DynamicCloseIcon = () => {
-  return (
-    <motion.svg
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0, transition: { duration: 0.05 } }}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="h-4 w-4 text-black"
-    >
-      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-      <path d="M18 6l-12 12" />
-      <path d="M6 6l12 12" />
-    </motion.svg>
-  );
-};
