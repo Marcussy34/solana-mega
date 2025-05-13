@@ -7,7 +7,7 @@ import { IconClipboardCheck, IconBook, IconBrandReact, IconAward, IconLogout, Ic
 import { useConnection, useWallet } from '@solana/wallet-adapter-react';
 import { WalletMultiButton } from '@solana/wallet-adapter-react-ui'; // To show connection status
 import { PublicKey } from '@solana/web3.js';
-import { Program, AnchorProvider } from '@coral-xyz/anchor';
+import { Program, AnchorProvider, BN } from '@coral-xyz/anchor';
 import idl from '../lib/idl/skillstreak_program.json'; // Import the IDL
 
 // --- Constants ---
@@ -162,29 +162,40 @@ const LearnPage = () => {
                     }
                     const userStateAccount = await program.account.userState.fetch(userStateAddress);
                     
+                    // --- START NEW DEBUG LOG ---
+                    console.log(`RAW Fetched UserState Object for market ${marketAcct.publicKey.toBase58()}:`, JSON.stringify(userStateAccount, (key, value) =>
+                        typeof value === 'bigint'
+                            ? value.toString()
+                            : value // return everything else unchanged
+                    , 2));
+                    // --- END NEW DEBUG LOG ---
+
                     // --- DEBUGGING: Log fetched UserState and timestamps ---
                     console.log(`Fetched UserState for market ${marketAcct.publicKey.toBase58()}:`, userStateAccount);
-                    console.log(`  Deposit Timestamp: ${userStateAccount.deposit_timestamp?.toString()}`);
-                    console.log(`  Lock-in End Timestamp: ${userStateAccount.lock_in_end_timestamp?.toString()}`);
+                    console.log(`  Market ${marketAcct.publicKey.toBase58()} - Deposit Timestamp: ${userStateAccount.depositTimestamp?.toString()}`);
+                    console.log(`  Market ${marketAcct.publicKey.toBase58()} - Lock-in End Timestamp: ${userStateAccount.lockInEndTimestamp?.toString()}`);
                     // --- END DEBUGGING ---
 
                     let lockInDurationDays = 'N/A';
-                    const depositTimestamp = userStateAccount.deposit_timestamp;
-                    const lockInEndTimestamp = userStateAccount.lock_in_end_timestamp;
+                    const depositTimestamp = userStateAccount.depositTimestamp;
+                    const lockInEndTimestamp = userStateAccount.lockInEndTimestamp;
 
-                    // Add checks for BN methods before calling them
-                    if (depositTimestamp && typeof depositTimestamp.isZero === 'function' && 
-                        lockInEndTimestamp && typeof lockInEndTimestamp.isZero === 'function' &&
-                        !depositTimestamp.isZero() && !lockInEndTimestamp.isZero() && 
+                    // --- UPDATED CHECK ---
+                    // First check if the properties exist and are BN objects
+                    if (depositTimestamp && BN.isBN(depositTimestamp) &&
+                        lockInEndTimestamp && BN.isBN(lockInEndTimestamp) &&
+                        !depositTimestamp.isZero() && 
+                        !lockInEndTimestamp.isZero() &&
                         lockInEndTimestamp.gt(depositTimestamp)) {
                         
                         const durationSeconds = lockInEndTimestamp.sub(depositTimestamp).toNumber();
                         lockInDurationDays = Math.round(durationSeconds / (24 * 60 * 60)); 
                     } else {
                          // --- DEBUGGING: Log why calculation failed ---
-                         console.log(`Calculation failed for market ${marketAcct.publicKey.toBase58()}: depositTsZero=${depositTimestamp?.isZero()}, endTsZero=${lockInEndTimestamp?.isZero()}, endGtDeposit=${lockInEndTimestamp?.gt(depositTimestamp)}`);
+                         console.log(`Calculation failed for market ${marketAcct.publicKey.toBase58()}: depositTs defined=${!!depositTimestamp}, depositTsIsBN=${BN.isBN(depositTimestamp)}, depositTsZero=${depositTimestamp && BN.isBN(depositTimestamp) ? depositTimestamp.isZero() : 'N/A'}, endTsDefined=${!!lockInEndTimestamp}, endTsIsBN=${BN.isBN(lockInEndTimestamp)}, endTsZero=${lockInEndTimestamp && BN.isBN(lockInEndTimestamp) ? lockInEndTimestamp.isZero() : 'N/A'}, endGtDeposit=${depositTimestamp && lockInEndTimestamp && BN.isBN(depositTimestamp) && BN.isBN(lockInEndTimestamp) ? lockInEndTimestamp.gt(depositTimestamp) : 'N/A'}`);
                          // --- END DEBUGGING ---
                     }
+                    // --- END UPDATED CHECK ---
                     
                     return {
                         publicKey: marketAcct.publicKey,
@@ -334,7 +345,7 @@ const LearnPage = () => {
                                           Market ID: <span className="text-purple-400">{market.publicKey.toBase58()}</span>
                                       </p>
                                       <p className="text-sm font-mono text-neutral-300">
-                                          Lock-in: <span className="text-green-400">{market.lockInDurationDays} days</span>
+                                          Lock-in duration: <span className="text-green-400">{market.lockInDurationDays} days</span>
                                       </p>
                                   </div>
                               ))}
