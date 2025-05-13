@@ -6,6 +6,7 @@ import { WalletMultiButton } from '@solana/wallet-adapter-react-ui';
 import { PublicKey, SystemProgram } from '@solana/web3.js';
 import { Program, AnchorProvider } from '@coral-xyz/anchor';
 import idl from '../../../lib/idl/skillstreak_program.json';
+import ReactConfetti from 'react-confetti';
 
 // Default styles that can be overridden by your app
 require('@solana/wallet-adapter-react-ui/styles.css');
@@ -32,6 +33,27 @@ const CongratsPage = () => {
   const [program, setProgram] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showPopup, setShowPopup] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(true);
+  const [windowDimensions, setWindowDimensions] = useState({ width: 0, height: 0 });
+
+  useEffect(() => {
+    // Set initial dimensions
+    setWindowDimensions({
+      width: window.innerWidth,
+      height: window.innerHeight
+    });
+
+    // Update dimensions on window resize
+    const handleResize = () => {
+      setWindowDimensions({
+        width: window.innerWidth,
+        height: window.innerHeight
+      });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Initialize program
   useEffect(() => {
@@ -120,6 +142,20 @@ const CongratsPage = () => {
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-[#0A192F] via-[#112240] to-[#1A365D] text-white p-8 relative overflow-hidden">
+      {/* Confetti Effect */}
+      {showConfetti && windowDimensions.width > 0 && (
+        <ReactConfetti
+          width={windowDimensions.width}
+          height={windowDimensions.height}
+          numberOfPieces={200}
+          recycle={false}
+          onConfettiComplete={() => setShowConfetti(false)}
+          colors={['#10B981', '#3B82F6', '#6366F1', '#8B5CF6', '#EC4899']}
+          gravity={0.25}
+          tweenDuration={4000}
+        />
+      )}
+      
       {/* Background glow effect */}
       <div className="absolute inset-0 bg-gradient-to-r from-green-500/10 via-blue-500/10 to-purple-500/10 animate-gradient-shift" />
       

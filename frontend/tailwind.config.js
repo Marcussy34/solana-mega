@@ -66,6 +66,9 @@ module.exports = {
   			}
   		},
       fontFamily: {
+        sans: ['Poppins', ...fontFamily.sans],
+        baloo: ['Baloo 2', 'cursive'],
+        mono: ['Consolas', 'Monaco', 'Courier New', 'monospace'],
         dimis: ['Dimis', ...fontFamily.sans],
         dashhorizon: ['DashHorizon', ...fontFamily.sans],
       },
