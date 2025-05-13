@@ -1053,14 +1053,17 @@ const Home = () => {
   const formatDate = (timestamp) => {
     if (!timestamp) return 'Not Set';
     const date = new Date(timestamp * 1000);
-    return date.toLocaleDateString('en-US', { 
+    const dateStr = date.toLocaleDateString('en-US', { 
       month: 'short', 
       day: 'numeric', 
-      year: 'numeric',
+      year: 'numeric'
+    });
+    const timeStr = date.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
       hour12: true
     });
+    return { dateStr, timeStr };
   };
 
   // Helper function to get status for lock period
@@ -1518,7 +1521,7 @@ const Home = () => {
                         // Content for active streak
                         <>
                           <h3 className="text-xl font-medium mb-2">Your Streak is Active!</h3>
-                          <p className="text-gray-400 mb-4">Keep your streak going by completing daily tasks. Your funds are locked and earning yield until {formatDate(userStateDetails.lockInEndTimestamp.toNumber())}.</p>
+                          <p className="text-gray-400 mb-4">Keep your streak going by completing daily tasks. Your funds are locked and earning yield until {formatDate(userStateDetails.lockInEndTimestamp.toNumber()).dateStr} {formatDate(userStateDetails.lockInEndTimestamp.toNumber()).timeStr}.</p>
                           <div className="flex gap-4">
                             <Button
                               className="bg-green-600 hover:bg-green-700 text-white rounded-xl"
@@ -1583,11 +1586,17 @@ const Home = () => {
                       <div className="grid grid-cols-2 gap-4 text-sm">
                         <div>
                           <p className="text-gray-400 mb-1">Started</p>
-                          <p className="font-mono">{formatDate(userStateDetails.depositTimestamp.toNumber())}</p>
+                          <div className="font-baloo">
+                            <p className="text-base">{formatDate(userStateDetails.depositTimestamp.toNumber()).dateStr}</p>
+                            <p className="text-xs text-gray-400">{formatDate(userStateDetails.depositTimestamp.toNumber()).timeStr}</p>
+                          </div>
                         </div>
                         <div>
                           <p className="text-gray-400 mb-1">Ends</p>
-                          <p className="font-mono">{formatDate(userStateDetails.lockInEndTimestamp.toNumber())}</p>
+                          <div className="font-baloo">
+                            <p className="text-base">{formatDate(userStateDetails.lockInEndTimestamp.toNumber()).dateStr}</p>
+                            <p className="text-xs text-gray-400">{formatDate(userStateDetails.lockInEndTimestamp.toNumber()).timeStr}</p>
+                          </div>
                         </div>
                       </div>
                       <Progress 
@@ -1640,7 +1649,7 @@ const Home = () => {
                     <div>
                       <p className="text-gray-400 mb-1">Last Activity</p>
                       <p>{userStateDetails.lastTaskTimestamp.toNumber() ? 
-                        formatDate(userStateDetails.lastTaskTimestamp.toNumber()) : 
+                        formatDate(userStateDetails.lastTaskTimestamp.toNumber()).dateStr : 
                         'No activity'}</p>
                     </div>
                   </div>
