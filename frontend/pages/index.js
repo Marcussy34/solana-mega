@@ -183,7 +183,7 @@ export default function LandingPage() {
             y: Math.sin(angle) * radius,
             // Ensure the <img> tags inside .sub-circle are visible and sized
           });
-          // animation.to(subCircle, { rotation: -360 }, 0); // Temporarily comment out sub-circle counter-rotation
+          animation.to(subCircle, { rotation: -360 }, 0); // Make sub-circles counter-rotate to stay upright
         });
         
         // Cleanup function for the animation
@@ -540,6 +540,7 @@ export default function LandingPage() {
                   {/* Logo */}
                   <Link href="/" className="flex items-center">
                     <img src="/lock-svgrepo-com.svg" alt="LockedIn Logo" className="h-8 w-auto" />
+                    <span className="ml-2 text-xl font-bold text-white">LockedIn</span>
                   </Link>
                   
                   {/* Desktop Navigation */}
@@ -557,12 +558,9 @@ export default function LandingPage() {
                   
                   {/* Action Buttons */}
                   <div className="flex items-center space-x-4">
-                    <a href="#contact" className="px-4 py-2 text-sm font-medium rounded-md bg-zinc-800 text-zinc-100 border border-zinc-700 hover:bg-zinc-700 transition-colors">
-                      Log In
-                    </a>
-                    <a href="#contact" className="px-4 py-2 text-sm font-medium rounded-md bg-purple-600 text-white hover:bg-purple-700 transition-colors">
+                    <Link href="/wallets" className="px-4 py-2 text-sm font-medium rounded-md bg-purple-600 text-white hover:bg-purple-700 transition-colors">
                       Get Started
-                    </a>
+                    </Link>
                   </div>
                   
                   {/* Mobile Navigation Toggle */}
@@ -597,12 +595,9 @@ export default function LandingPage() {
                         </a>
                       ))}
                       <div className="mt-4 flex flex-col space-y-2">
-                        <a href="#contact" className="w-full px-4 py-2 text-sm font-medium rounded-md bg-zinc-800 text-zinc-100 border border-zinc-700 hover:bg-zinc-700 transition-colors text-center">
-                          Log In
-                        </a>
-                        <a href="#contact" className="w-full px-4 py-2 text-sm font-medium rounded-md bg-purple-600 text-white hover:bg-purple-700 transition-colors text-center">
+                        <Link href="/wallets" className="w-full px-4 py-2 text-sm font-medium rounded-md bg-purple-600 text-white hover:bg-purple-700 transition-colors text-center">
                           Get Started
-                        </a>
+                        </Link>
                       </div>
                     </div>
                   </div>
