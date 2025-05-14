@@ -3,7 +3,7 @@ import React, { useState, useRef, useEffect, useId } from "react";
 import { ContainerScroll, Header, Card } from "@/components/ui/container-scroll-animation";
 import { CardContainer, CardBody, CardItem } from "@/components/ui/3d-card";
 import { ThreeDMarquee } from "@/components/ui/3d-marquee";
-import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import { motion, useScroll, useTransform, AnimatePresence, useMotionValue, useAnimationFrame, animate } from "framer-motion";
 import Link from "next/link";
 import Script from 'next/script';
 import Head from 'next/head';
@@ -91,7 +91,7 @@ export default function LandingPage() {
       window.removeEventListener('scroll', controlNavbar);
       window.removeEventListener('mousemove', checkMousePosition);
     };
-  }, []); // Dependency array remains empty
+  }, []);
 
   // Animation timing
   useEffect(() => {
@@ -121,6 +121,13 @@ export default function LandingPage() {
     
     return () => clearTimeout(animationTimer);
   }, []);
+
+  // Scroll to top when loading is complete
+  useEffect(() => {
+    if (!loading) {
+      window.scrollTo(0, 0);
+    }
+  }, [loading]);
   
   // Reference for scroll animation
   const containerRef = useRef(null);
@@ -138,7 +145,7 @@ export default function LandingPage() {
   useEffect(() => {
     if (gsapLoaded && scrollTriggerLoaded && scrollToLoaded && typeof window !== 'undefined') {
       console.log('Initializing GSAP animations for panels');
-      initPanelGSAP();
+      // initPanelGSAP(); // Temporarily commented out as the panel section is removed
     }
   }, [gsapLoaded, scrollTriggerLoaded, scrollToLoaded]);
 
@@ -340,18 +347,29 @@ export default function LandingPage() {
     }
     const duplicatedItems = [...items, ...items];
 
+    const baseX = useMotionValue(0); // Represents the percentage offset, starting at 0
+
+    useAnimationFrame((time, delta) => {
+      // We want baseX to go from 0 to -50 (representing -50% of motion.div width) in 'speed' milliseconds.
+      // So, the change per millisecond is -50 / speed.
+      let advance = (-50 / speed) * delta;
+      baseX.set(baseX.get() + advance);
+    });
+
+    // Wrap utility function
+    const wrap = (min, max, v) => {
+      const rangeSize = max - min;
+      return ((((v - min) % rangeSize) + rangeSize) % rangeSize) + min;
+    };
+    
+    // Use useTransform to apply the wrap and convert to percentage string for the x style
+    const x = useTransform(baseX, (latest) => `${wrap(-50, 0, latest)}%`);
+
     return (
-      <div className="w-full overflow-hidden relative" style={{ maskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)' }}>
+      <div className="w-full overflow-hidden relative" /* style={{ maskImage: 'linear-gradient(to right, transparent, black 5%, black 95%, transparent)' }} */ > {/* Temporarily remove maskImage */}
         <motion.div
           className="flex"
-          animate={{
-            x: ['0%', `-${100 * (items.length / duplicatedItems.length)}%`],
-          }}
-          transition={{
-            ease: 'linear',
-            duration: speed / 1000, // Duration for one full cycle of original items
-            repeat: Infinity,
-          }}
+          style={{ x }} // Use the transformed x value
         >
           {duplicatedItems.map((item, index) => (
             <div key={`${item.title}-${index}`} className="flex-shrink-0 w-[320px] md:w-[380px] p-3"> {/* Card width and padding */}
@@ -527,7 +545,7 @@ export default function LandingPage() {
 
         {/* Hover Navbar */}
         <AnimatePresence>
-          {showNavbar && (
+          {!loading && showNavbar && (
             <motion.div 
               className="fixed top-0 left-0 w-full z-50 bg-zinc-900/80 backdrop-blur-sm border-b border-zinc-700/50"
               initial={{ y: -100 }}
@@ -983,7 +1001,7 @@ export default function LandingPage() {
             <p className="text-lg md:text-xl text-zinc-400 mb-12 max-w-3xl mx-auto text-center">
               To generate yield, your deposited USDC is strategically allocated across a diversified portfolio of on-chain products. Our system continuously monitors and optimizes these positions to maximize returns while managing risk. Here are some of the core strategies we employ:
             </p>
-            <HorizontalScroller items={investmentProductsData} speed={25000} /> {/* Using the new scroller */}
+            <HorizontalScroller items={investmentProductsData} speed={5000} /> {/* Using the new scroller, speed updated from 25000 to 12500 */}
           </div>
         </section>
 
@@ -1059,7 +1077,7 @@ export default function LandingPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 20px; /* Added padding for spacing */
+          padding: 20px 120px 20px 0; /* Increased right padding to shift content further left */
         }
         .main-circle {
           width: 300px;
