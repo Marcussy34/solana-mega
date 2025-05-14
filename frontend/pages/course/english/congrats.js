@@ -8,9 +8,6 @@ import { Program, AnchorProvider } from '@coral-xyz/anchor';
 import idl from '../../../lib/idl/skillstreak_program.json';
 import ReactConfetti from 'react-confetti';
 
-// Default styles that can be overridden by your app
-require('@solana/wallet-adapter-react-ui/styles.css');
-
 // Constants
 console.log("Imported IDL:", idl);
 
@@ -35,6 +32,11 @@ const CongratsPage = () => {
   const [showPopup, setShowPopup] = useState(false);
   const [showConfetti, setShowConfetti] = useState(true);
   const [windowDimensions, setWindowDimensions] = useState({ width: 0, height: 0 });
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
 
   useEffect(() => {
     // Set initial dimensions
@@ -161,7 +163,7 @@ const CongratsPage = () => {
       
       {/* Wallet connect button */}
       <div className="absolute top-4 right-4 z-50">
-        <WalletMultiButton />
+        {isClient && <WalletMultiButton />}
       </div>
 
       {/* Content container */}

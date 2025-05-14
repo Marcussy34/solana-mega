@@ -7,7 +7,6 @@ import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion"
 import Link from "next/link";
 import Script from 'next/script';
 import Head from 'next/head';
-import { Timeline } from "@/components/ui/timeline";
 import { useOutsideClick } from "@/hooks/use-outside-click";
 
 export default function LandingPage() {
@@ -32,6 +31,15 @@ export default function LandingPage() {
   const [gsapLoaded, setGsapLoaded] = useState(false);
   const [scrollTriggerLoaded, setScrollTriggerLoaded] = useState(false);
   const [scrollToLoaded, setScrollToLoaded] = useState(false);
+  const [draggableLoaded, setDraggableLoaded] = useState(false);
+  
+  // State for spinning circle icons
+  const [randomIconPoolURLs, setRandomIconPoolURLs] = useState([
+    '/lock-svgrepo-com.svg', 
+    '/solanaLogoMark.svg', 
+    '/usd-coin-usdc-logo.svg'
+  ]);
+  const [selectedIconURLs, setSelectedIconURLs] = useState(['', '', '']);
   
   // Text to display letter by letter
   const fullText = "LockedIn";
@@ -134,6 +142,60 @@ export default function LandingPage() {
     }
   }, [gsapLoaded, scrollTriggerLoaded, scrollToLoaded]);
 
+  useEffect(() => {
+    // Logic for the spinning circle images
+    if (gsapLoaded && typeof window !== 'undefined') { 
+      const uniqueImageUrls = Array.from(new Set(randomIconPoolURLs));
+      const shuffledUniqueImageUrls = [...uniqueImageUrls].sort(() => 0.5 - Math.random());
+
+      const newSelectedIconURLsOutput = [];
+      const numIconsToDisplay = 3; // For the 3 sub-circles
+
+      for (let i = 0; i < numIconsToDisplay; i++) {
+        if (i < shuffledUniqueImageUrls.length) {
+          newSelectedIconURLsOutput.push(shuffledUniqueImageUrls[i]);
+        } else {
+          // If not enough unique images, push an empty string for this slot
+          newSelectedIconURLsOutput.push('');
+        }
+      }
+      setSelectedIconURLs(newSelectedIconURLsOutput);
+
+      // GSAP Animation for .main-circle and .sub-circles
+      const mainCircle = document.querySelector('.main-circle');
+      const subCircles = gsap.utils.toArray(".sub-circle");
+
+      if (mainCircle && subCircles.length === numIconsToDisplay) {
+        // Example GSAP animation (adapt to your needs):
+        const animation = gsap.timeline({ repeat: -1, defaults: { duration: 50, ease: "none" } });
+        animation.to(mainCircle, { rotation: 360 });
+
+        subCircles.forEach((subCircle, index) => {
+          const angle = (index / numIconsToDisplay) * Math.PI * 2;
+          const radius = mainCircle.offsetWidth / 2; // Corrected radius to place icons on the circumference
+          gsap.set(subCircle, {
+            position: 'absolute',
+            left: '50%',
+            top: '50%',
+            xPercent: -50,
+            yPercent: -50,
+            x: Math.cos(angle) * radius,
+            y: Math.sin(angle) * radius,
+            // Ensure the <img> tags inside .sub-circle are visible and sized
+          });
+          // animation.to(subCircle, { rotation: -360 }, 0); // Temporarily comment out sub-circle counter-rotation
+        });
+        
+        // Cleanup function for the animation
+        return () => {
+          animation.kill();
+          gsap.set(subCircles, { clearProps: "all" }); 
+          gsap.set(mainCircle, { clearProps: "rotation" });
+        };
+      }
+    }
+  }, [gsapLoaded, randomIconPoolURLs]); // Corrected dependencies
+
   // Initialize GSAP and ScrollTrigger for Panels
   const initPanelGSAP = () => {
     const gsap = window.gsap;
@@ -166,16 +228,7 @@ export default function LandingPage() {
       });
     });
     
-    const tl = gsap.timeline({
-      scrollTrigger: {
-        trigger: "#panels-section-howitworks",
-        pin: true,
-        start: "top top",
-        end: `+=${window.innerHeight * (coloredPanels.length * 0.75)}`, 
-        scrub: 1,
-        pinSpacing: true
-      }
-    });
+
     
     coloredPanels.forEach((panel, i) => {
       const reversedIndex = coloredPanels.length - 1 - i;
@@ -261,61 +314,15 @@ export default function LandingPage() {
     { name: "Features", link: "#features" },
     { name: "Benefits", link: "#benefits" },
     { name: "Testimonials", link: "#testimonials" },
-    { name: "Pricing", link: "#pricing" },
   ];
 
   // Images for the marquee
-  const images = [
+  const marqueeImages = [
     "https://assets.aceternity.com/cloudinary_bkp/3d-card.png",
     "https://assets.aceternity.com/world-map.webp",
   ];
 
-  // Data for the new Timeline component
-  const lockedInTimelineData = [
-    {
-      title: "Sign Up & Connect",
-      content: (
-        <div className="text-white text-sm md:text-base">
-          <p className="mb-2">Quickly create your LockedIn account and connect your Solana wallet (like Phantom or Solflare). This is your gateway to learning and earning!</p>
-          <img src="/placeholder-signup.png" alt="Sign Up Illustration" className="rounded-lg shadow-md mt-3 w-full max-w-xs filter grayscale" />
-        </div>
-      ),
-    },
-    {
-      title: "Choose Your Track",
-      content: (
-        <div className="text-white text-sm md:text-base">
-          <p className="mb-2">Browse our extensive library of courses. Whether it's coding, design, or blockchain fundamentals, pick a learning track that excites you and fits your goals.</p>
-          <img src="/placeholder-courses.png" alt="Course Selection Illustration" className="rounded-lg shadow-md mt-3 w-full max-w-xs filter grayscale" />
-        </div>
-      ),
-    },
-    {
-      title: "Learn & Earn Yield",
-      content: (
-        <div className="text-white text-sm md:text-base">
-          <p className="mb-2">Deposit USDC to your LockedIn account. As you complete lessons and maintain your learning streaks, you'll earn attractive yields on your deposited capital. The more you learn, the more you earn!</p>
-        </div>
-      ),
-    },
-    {
-      title: "Compete & Bet (Optional)",
-      content: (
-        <div className="text-white text-sm md:text-base">
-          <p className="mb-2">Up the ante with social betting! Challenge friends or other learners on course completion. Stake USDC, race to the finish, and win extra rewards plus bragging rights.</p>
-        </div>
-      ),
-    },
-    {
-      title: "Track Progress & Grow",
-      content: (
-        <div className="text-white text-sm md:text-base">
-          <p className="mb-2">Monitor your achievements on your personalized dashboard. See your completed courses, total earnings, and skill development. Keep the streak alive and watch your knowledge and wallet expand!</p>
-          <img src="/placeholder-dashboard.png" alt="Dashboard Illustration" className="rounded-lg shadow-md mt-3 w-full max-w-xs filter grayscale" />
-        </div>
-      ),
-    },
-  ];
+
 
   const investmentProductsData = [
     { title: "Token Lending", description: "Lending out various crypto assets on established decentralized lending platforms to earn interest.", src: "/image_index/Crypto Asset Lending_simple_compose_01jv47c6yeeaz9x6ppxwxh6b1e.png", ctaText: "Learn More", ctaLink: "#", content: () => <p>A portion of funds is allocated to lend out various crypto assets—such as ETH, WBTC, and even stablecoins—on leading decentralized money markets. We primarily use platforms like Aave, Compound, Spark Protocol, and Sonne Finance, which are known for their deep liquidity and strong security track records. By supplying assets to these protocols, we earn interest paid by borrowers, with most platforms employing over-collateralization and real-time liquidation mechanisms to manage risk. When lending volatile assets, we use risk-adjusted allocation caps to protect the portfolio from sudden price swings.</p> },
@@ -379,7 +386,7 @@ export default function LandingPage() {
         <meta name="description" content="Welcome to LockedIn, the future of secure asset management." />
       </Head>
 
-      {/* Load GSAP and plugins */}
+
       <Script 
         src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.4/gsap.min.js"
         strategy="afterInteractive"
@@ -394,6 +401,14 @@ export default function LandingPage() {
         src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.4/ScrollToPlugin.min.js"
         strategy="afterInteractive"
         onLoad={() => setScrollToLoaded(true)}
+      />
+      <Script 
+        src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.4/Draggable.min.js"
+        strategy="afterInteractive"
+        onLoad={() => {
+          console.log('[GSAP Draggable] Loaded');
+          setDraggableLoaded(true);
+        }}
       />
 
       {/* Loading Overlay */}
@@ -524,7 +539,7 @@ export default function LandingPage() {
                 <div className="flex items-center justify-between h-16">
                   {/* Logo */}
                   <Link href="/" className="flex items-center">
-                    <span className="text-xl font-bold text-white">LockedIn</span>
+                    <img src="/lock-svgrepo-com.svg" alt="LockedIn Logo" className="h-8 w-auto" />
                   </Link>
                   
                   {/* Desktop Navigation */}
@@ -545,7 +560,7 @@ export default function LandingPage() {
                     <a href="#contact" className="px-4 py-2 text-sm font-medium rounded-md bg-zinc-800 text-zinc-100 border border-zinc-700 hover:bg-zinc-700 transition-colors">
                       Log In
                     </a>
-                    <a href="#contact" className="px-4 py-2 text-sm font-medium rounded-md bg-zinc-700 text-zinc-100 hover:bg-zinc-600 transition-colors">
+                    <a href="#contact" className="px-4 py-2 text-sm font-medium rounded-md bg-purple-600 text-white hover:bg-purple-700 transition-colors">
                       Get Started
                     </a>
                   </div>
@@ -585,7 +600,7 @@ export default function LandingPage() {
                         <a href="#contact" className="w-full px-4 py-2 text-sm font-medium rounded-md bg-zinc-800 text-zinc-100 border border-zinc-700 hover:bg-zinc-700 transition-colors text-center">
                           Log In
                         </a>
-                        <a href="#contact" className="w-full px-4 py-2 text-sm font-medium rounded-md bg-zinc-700 text-zinc-100 hover:bg-zinc-600 transition-colors text-center">
+                        <a href="#contact" className="w-full px-4 py-2 text-sm font-medium rounded-md bg-purple-600 text-white hover:bg-purple-700 transition-colors text-center">
                           Get Started
                         </a>
                       </div>
@@ -623,7 +638,7 @@ export default function LandingPage() {
 
           {/* 3D Marquee Background */}
           <div className="absolute inset-0 z-1 opacity-10 overflow-hidden filter grayscale">
-            <ThreeDMarquee images={images} />
+            <ThreeDMarquee images={marqueeImages} />
           </div>
           
           {/* Content */}
@@ -631,21 +646,34 @@ export default function LandingPage() {
             <div className="flex flex-col md:flex-row items-center justify-between min-h-[calc(100vh-5rem)] pt-16 md:pt-0 gap-8">
               {/* Text Content Block */}
               <div className="md:w-1/2 lg:w-3/5 max-w-2xl text-left">
-                <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 text-white font-dashhorizon">
+                <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 text-white">
                   LockedIn
                 </h1>
-                <p className="text-xl md:text-2xl mb-8 text-zinc-300 font-dashhorizon">
+                <p className="text-xl md:text-2xl mb-8 text-zinc-300">
                   Learn, Earn & Build Habits on Solana. Master new skills while earning yield on your capital.
                 </p>
+                {/* Hero Buttons */}
+                <div className="flex flex-col sm:flex-row gap-4 mb-8">
+                  <Link href="/wallets" className="px-8 py-3 text-lg font-semibold rounded-lg bg-purple-600 text-white hover:bg-purple-700 transition-colors text-center sm:text-left">
+                    Get Started
+                  </Link>
+                  <a href="#how-we-invest-funds-section" className="px-8 py-3 text-lg font-semibold rounded-lg bg-zinc-700 text-white hover:bg-zinc-600 transition-colors text-center sm:text-left">
+                    Learn More
+                  </a>
+                </div>
               </div>
-              {/* Phone Image Block */}
-              <div className="md:w-1/2 lg:w-2/5 flex justify-center md:justify-end mt-8 md:mt-0">
-                <img 
-                  src="/placeholder-phone.png" 
-                  alt="App Preview on Phone" 
-                  className="w-auto h-[350px] sm:h-[400px] md:h-[450px] lg:h-[500px] object-contain drop-shadow-2xl"
-                  style={{ filter: 'drop-shadow(0 10px 15px rgba(0,0,0,0.3))' }}
-                />
+              {/* Spinning Circle Block */}
+              <div className="md:w-1/2 lg:w-2/5 flex justify-center items-center mt-8 md:mt-0">
+                <div className="viewport-box">
+                  <div className="main-circle">
+                    {/* Add the three sub-circles that will display the icons */}
+                    {selectedIconURLs.map((url, index) => (
+                      <div key={index} className="sub-circle">
+                        {url && <img src={url} alt={`Rotating Icon ${index + 1}`} className="circle-icon-style" />}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -663,17 +691,13 @@ export default function LandingPage() {
                 <Link href="/wallets" className="block w-full h-full">
                   <CardContainer className="w-full" containerClassName="!py-4 !w-full">
                     <CardBody className="!w-full !h-[400px]">
-                      <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer bg-gradient-to-br from-gray-600 via-gray-700 to-gray-900 border border-zinc-700"
+                      <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer bg-gradient-to-br from-slate-300 via-slate-400 to-slate-500 border border-slate-500"
                         style={{
-                          boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.03)"
+                          boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(0, 0, 0, 0.05)"
                         }}>
                         
                         {/* Hover brightness effect */}
-                        <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-5 transition-opacity duration-300 z-5 pointer-events-none">
-                        </div>
-                        
-                        {/* Metallic overlay */}
-                        <div className="absolute inset-0 opacity-10 z-10 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent">
+                        <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300 z-5 pointer-events-none">
                         </div>
                         
                         <div className="absolute inset-0 z-20 p-6">
@@ -682,12 +706,12 @@ export default function LandingPage() {
                               {/* Icon container */}
                               <CardItem
                                 translateZ={40}
-                                className="w-28 h-28 rounded-full flex items-center justify-center bg-zinc-800 border border-zinc-700"
+                                className="w-28 h-28 rounded-full flex items-center justify-center bg-slate-200 border border-slate-400"
                                 style={{ 
-                                  boxShadow: "0 0 15px rgba(255, 255, 255, 0.05), inset 0 0 20px rgba(255, 255, 255, 0.02)"
+                                  boxShadow: "0 0 15px rgba(0, 0, 0, 0.1), inset 0 0 10px rgba(0, 0, 0, 0.05)"
                                 }}>
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-14 h-14 text-zinc-400"
-                                  style={{ filter: "drop-shadow(0 0 1px rgba(255, 255, 255, 0.1))" }}>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-14 h-14 text-slate-600"
+                                  style={{ filter: "drop-shadow(0 0 1px rgba(0, 0, 0, 0.1))" }}>
                                   <rect x="2" y="6" width="20" height="12" rx="2" strokeWidth="1.5" />
                                   <path d="M22 10H18C16.9 10 16 10.9 16 12V12C16 13.1 16.9 14 18 14H22V10Z" strokeWidth="1.5" />
                                 </svg>
@@ -698,14 +722,14 @@ export default function LandingPage() {
                               {/* Number badge */}
                               <CardItem
                                 translateZ={20}
-                                className="bg-zinc-700/80 text-white h-8 px-4 rounded-full flex items-center justify-center font-bold text-lg mb-2 group-hover:bg-zinc-600">
+                                className="bg-slate-500/80 text-white h-8 px-4 rounded-full flex items-center justify-center font-bold text-lg mb-2 group-hover:bg-slate-600">
                                 1
                               </CardItem>
                               
                               {/* Title */}
                               <CardItem
                                 translateZ={50}
-                                className="text-3xl font-bold text-left text-zinc-300 group-hover:text-white">
+                                className="text-3xl font-bold text-left text-slate-800 group-hover:text-black">
                                 Pick a wallet
                               </CardItem>
                             </div>
@@ -722,17 +746,13 @@ export default function LandingPage() {
                 <div className="cursor-pointer">
                   <CardContainer className="w-full" containerClassName="!py-4 !w-full">
                     <CardBody className="!w-full !h-[400px]">
-                      <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer bg-gradient-to-br from-gray-600 via-gray-700 to-gray-900 border border-zinc-700"
+                      <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer bg-gradient-to-br from-slate-300 via-slate-400 to-slate-500 border border-slate-500"
                         style={{
-                          boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.03)"
+                          boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(0, 0, 0, 0.05)"
                         }}>
                         
                         {/* Hover brightness effect */}
-                        <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-5 transition-opacity duration-300 z-5 pointer-events-none">
-                        </div>
-                        
-                        {/* Metallic overlay */}
-                        <div className="absolute inset-0 opacity-10 z-10 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent">
+                        <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300 z-5 pointer-events-none">
                         </div>
                         
                         <div className="absolute inset-0 z-20 p-6">
@@ -743,16 +763,16 @@ export default function LandingPage() {
                                 translateZ={40}
                                 className="w-28 h-28 flex items-center justify-center">
                                 <div className="w-full h-full rotate-45" style={{ 
-                                  boxShadow: "0 0 15px rgba(255, 255, 255, 0.03)"
+                                  boxShadow: "0 0 15px rgba(0, 0, 0, 0.1)"
                                 }}>
-                                  <div className="absolute inset-0 w-full h-full border-2 border-zinc-700/50 rounded-lg bg-zinc-800/30" 
+                                  <div className="absolute inset-0 w-full h-full border-2 border-slate-500/50 rounded-lg bg-slate-200/30" 
                                     style={{ 
-                                      boxShadow: "inset 0 0 10px rgba(255, 255, 255, 0.02)"
+                                      boxShadow: "inset 0 0 10px rgba(0, 0, 0, 0.05)"
                                     }}>
                                   </div>
                                   <div className="absolute inset-0 flex items-center justify-center -rotate-45">
-                                    <span className="text-zinc-200 text-3xl font-bold group-hover:text-white" 
-                                      style={{ textShadow: "0 0 5px rgba(255, 255, 255, 0.05)" }}>
+                                    <span className="text-slate-700 text-3xl font-bold group-hover:text-black" 
+                                      style={{ textShadow: "0 0 5px rgba(0, 0, 0, 0.05)" }}>
                                       IP
                                     </span>
                                   </div>
@@ -764,14 +784,14 @@ export default function LandingPage() {
                               {/* Number badge */}
                               <CardItem
                                 translateZ={20}
-                                className="bg-zinc-700/80 text-white h-8 px-4 rounded-full flex items-center justify-center font-bold text-lg mb-2 group-hover:bg-zinc-600">
+                                className="bg-slate-500/80 text-white h-8 px-4 rounded-full flex items-center justify-center font-bold text-lg mb-2 group-hover:bg-slate-600">
                                 2
                               </CardItem>
                               
                               {/* Title */}
                               <CardItem
                                 translateZ={50}
-                                className="text-3xl font-bold text-left text-zinc-300 group-hover:text-white">
+                                className="text-3xl font-bold text-left text-slate-800 group-hover:text-black">
                                 Fund Account
                               </CardItem>
                             </div>
@@ -788,17 +808,13 @@ export default function LandingPage() {
                 <div className="cursor-pointer">
                   <CardContainer className="w-full" containerClassName="!py-4 !w-full">
                     <CardBody className="!w-full !h-[400px]">
-                      <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer bg-gradient-to-br from-gray-600 via-gray-700 to-gray-900 border border-zinc-700"
+                      <div className="relative w-full h-full rounded-xl overflow-hidden transition-all duration-300 group cursor-pointer bg-gradient-to-br from-slate-300 via-slate-400 to-slate-500 border border-slate-500"
                         style={{
-                          boxShadow: "0 10px 30px rgba(0, 0, 0, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.03)"
+                          boxShadow: "0 10px 30px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(0, 0, 0, 0.05)"
                         }}>
                         
                         {/* Hover brightness effect */}
-                        <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-5 transition-opacity duration-300 z-5 pointer-events-none">
-                        </div>
-                        
-                        {/* Metallic overlay */}
-                        <div className="absolute inset-0 opacity-10 z-10 pointer-events-none bg-gradient-to-r from-transparent via-white/5 to-transparent">
+                        <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-10 transition-opacity duration-300 z-5 pointer-events-none">
                         </div>
                         
                         <div className="absolute inset-0 z-20 p-6">
@@ -807,12 +823,12 @@ export default function LandingPage() {
                               {/* Icon container */}
                               <CardItem
                                 translateZ={40}
-                                className="w-28 h-28 rounded-xl flex items-center justify-center bg-zinc-800 border border-zinc-700"
+                                className="w-28 h-28 rounded-xl flex items-center justify-center bg-slate-200 border border-slate-400"
                                 style={{ 
-                                  boxShadow: "0 0 15px rgba(255, 255, 255, 0.05), inset 0 0 20px rgba(255, 255, 255, 0.02)"
+                                  boxShadow: "0 0 15px rgba(0, 0, 0, 0.1), inset 0 0 10px rgba(0, 0, 0, 0.05)"
                                 }}>
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-14 h-14 text-zinc-400 group-hover:text-white"
-                                  style={{ filter: "drop-shadow(0 0 1px rgba(255, 255, 255, 0.1))" }}>
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-14 h-14 text-slate-600 group-hover:text-black"
+                                  style={{ filter: "drop-shadow(0 0 1px rgba(0, 0, 0, 0.1))" }}>
                                   <polygon points="5 3 19 12 5 21 5 3" strokeWidth="1.5" />
                                 </svg>
                               </CardItem>
@@ -822,14 +838,14 @@ export default function LandingPage() {
                               {/* Number badge */}
                               <CardItem
                                 translateZ={20}
-                                className="bg-zinc-700/80 text-white h-8 px-4 rounded-full flex items-center justify-center font-bold text-lg mb-2 group-hover:bg-zinc-600">
+                                className="bg-slate-500/80 text-white h-8 px-4 rounded-full flex items-center justify-center font-bold text-lg mb-2 group-hover:bg-slate-600">
                                 3
                               </CardItem>
                               
                               {/* Title */}
                               <CardItem
                                 translateZ={50}
-                                className="text-3xl font-bold text-left text-zinc-300 group-hover:text-white">
+                                className="text-3xl font-bold text-left text-slate-800 group-hover:text-black">
                                 Explore Learning Tracks
                               </CardItem>
                             </div>
@@ -843,19 +859,6 @@ export default function LandingPage() {
             </div>
           </div>
         </section>
-
-        {/* How LockedIn Works - Timeline Section */}
-        {/* <section className="bg-black">
-          <div className="max-w-7xl mx-auto py-16 md:py-24 px-4 sm:px-6 lg:px-8">
-            <h2 className="text-3xl md:text-5xl font-bold mb-4 text-center text-white">
-              How LockedIn Works
-            </h2>
-            <p className="text-xl text-center text-zinc-400 max-w-3xl mx-auto mb-12 md:mb-16">
-              Follow these simple steps to start learning, earning, and growing with LockedIn on the Solana blockchain.
-            </p>
-            <Timeline data={lockedInTimelineData} className="dark" />
-          </div>
-        </section> */}
 
         {/* Interactive Panels Section (Formerly How It Works) */}
         {/* <section id="panels-section-howitworks" className="min-h-screen bg-black py-12 md:py-20 relative">
@@ -977,7 +980,7 @@ export default function LandingPage() {
         }
 
         {/* How We Invest Your Funds Section - Updated with Horizontal Scroller */}
-        <section className="py-16 md:py-24 bg-black text-white">
+        <section id="how-we-invest-funds-section" className="py-16 md:py-24 bg-black text-white">
           <div className="container mx-auto px-4">
             <h2 className="text-3xl md:text-4xl font-bold mb-10 text-center">
               How We Invest Your Funds
@@ -1055,7 +1058,39 @@ export default function LandingPage() {
       </div>
 
       {/* Styles for the How It Works Panels - Scoped */}
-      {/* <style jsx>{` ... `}</style> */}
+      <style jsx>{`
+        .viewport-box {
+          width: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px; /* Added padding for spacing */
+        }
+        .main-circle {
+          width: 300px;
+          height: 300px;
+          border: solid 2px #fffce1;
+          border-radius: 50%;
+          position: relative; /* Essential for absolute positioning of children */
+        }
+        .sub-circle {
+          /* GSAP will handle positioning (top, left, x, y, xPercent, yPercent) */
+          /* It's important that sub-circles are 'position: absolute' for GSAP to correctly place them within .main-circle */
+          position: absolute; 
+        }
+        .circle-icon-style { /* Style for the img tags within sub-circles */
+            width: 50px; 
+            height: 50px;
+            display: block; /* Or inline-block, depending on desired layout within sub-circle */
+            object-fit: contain; /* Or cover, depending on image aspect ratios */
+            border-radius: 50%; /* Optional: if you want the icons themselves to be circular */
+        }
+        /* Removed or comment out the old .main-circle :global(img) if no longer needed */
+        /* .main-circle :global(img) { 
+            width: 50px; 
+            height: 50px;
+        } */
+      `}</style>
     </>
   );
 }
