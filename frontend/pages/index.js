@@ -1077,7 +1077,7 @@ export default function LandingPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 20px 120px 20px 0; /* Increased right padding to shift content further left */
+          padding: 20px 240px 20px 0; /* Increased right padding to shift content further left */
         }
         .main-circle {
           width: 300px;
