@@ -1294,7 +1294,7 @@ const Home = () => {
         {/* Transaction Status Notification */}
         {transactionStatus && notificationVisible && (
           <div 
-            className={`fixed top-4 right-4 p-4 rounded-lg shadow-lg transition-opacity duration-500 ${
+            className={`fixed bottom-4 right-4 p-4 rounded-lg shadow-lg transition-opacity duration-500 ${
               notificationVisible ? 'opacity-100' : 'opacity-0'
             } ${
               transactionStatus.type === 'error' 
