@@ -196,7 +196,7 @@ export const NavbarLogo = ({ asChild, children, className, ...props }) => {
       {...props}>
       {children || (
         <>
-          <img src="/lock-svgrepo-com.svg" alt="LockedIn Logo" className="w-8 h-8" />
+          <img src="/image/lockedin_logo.png" alt="LockedIn Logo" className="w-8 h-8" />
           <span className="font-medium text-black dark:text-white">LockedIn</span>
         </>
       )}

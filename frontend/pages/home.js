@@ -1215,7 +1215,7 @@ const Home = () => {
         <NavbarBrand>
           <Link href="/">
             <div className="flex items-center cursor-pointer hover:opacity-80 transition-opacity">
-              <Image src="/lock-svgrepo-com.svg" alt="LockedIn Logo" width={24} height={24} className="mr-2" />
+              <Image src="/image/lockedin_logo.png" alt="LockedIn Logo" width={24} height={24} className="mr-2" />
               <h1 className="font-medium text-xl">LockedIn</h1>
             </div>
           </Link>

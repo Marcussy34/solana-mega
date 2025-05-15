@@ -35,7 +35,7 @@ export default function LandingPage() {
   
   // State for spinning circle icons
   const [randomIconPoolURLs, setRandomIconPoolURLs] = useState([
-    '/lock-svgrepo-com.svg', 
+    '/image/lockedin_logo.png', 
     '/solanaLogoMark.svg', 
     '/usd-coin-usdc-logo.svg'
   ]);
@@ -160,10 +160,12 @@ export default function LandingPage() {
 
       for (let i = 0; i < numIconsToDisplay; i++) {
         if (i < shuffledUniqueImageUrls.length) {
-          newSelectedIconURLsOutput.push(shuffledUniqueImageUrls[i]);
+          const url = shuffledUniqueImageUrls[i];
+          // Add a class to identify the LockedIn logo
+          const className = url.includes('lockedin_logo') ? 'circle-icon-style lockedin-logo' : 'circle-icon-style';
+          newSelectedIconURLsOutput.push({ url, className });
         } else {
-          // If not enough unique images, push an empty string for this slot
-          newSelectedIconURLsOutput.push('');
+          newSelectedIconURLsOutput.push({ url: '', className: 'circle-icon-style' });
         }
       }
       setSelectedIconURLs(newSelectedIconURLsOutput);
@@ -396,11 +398,31 @@ export default function LandingPage() {
     );
   };
 
+  // Add useEffect for particles.js initialization
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.particlesJS) {
+      window.particlesJS.load('particles-js', '/particles-config.json', function() {
+        console.log('particles.js loaded - callback');
+      });
+    }
+  }, []);
+
+  // Add styles for particles
+  const particlesStyle = {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    zIndex: 0
+  };
+
   return (
     <>
       <Head>
         <title>LockedIn - Secure Your Future</title>
         <meta name="description" content="Welcome to LockedIn, the future of secure asset management." />
+        <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
       </Head>
 
 
@@ -556,7 +578,7 @@ export default function LandingPage() {
                 <div className="flex items-center justify-between h-16">
                   {/* Logo */}
                   <Link href="/" className="flex items-center">
-                    <img src="/lock-svgrepo-com.svg" alt="LockedIn Logo" className="h-8 w-auto" />
+                    <img src="/image/lockedin_logo.png" alt="LockedIn Logo" className="h-8 w-auto" />
                     <span className="ml-2 text-xl font-bold text-white">LockedIn</span>
                   </Link>
                   
@@ -626,8 +648,11 @@ export default function LandingPage() {
 
         {/* Hero Section */}
         <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
-          {/* Background Video */}
-          <video
+          {/* Particles.js Container */}
+          <div id="particles-js" className="absolute inset-0 z-0"></div>
+
+          {/* Background Video - Removed since we're using particles */}
+          {/* <video
             autoPlay
             loop
             muted
@@ -646,7 +671,7 @@ export default function LandingPage() {
           >
             <source src="/" type="video/mp4" />
             Your browser does not support the video tag.
-          </video>
+          </video> */}
 
           {/* 3D Marquee Background */}
           <div className="absolute inset-0 z-1 opacity-10 overflow-hidden filter grayscale">
@@ -679,9 +704,9 @@ export default function LandingPage() {
                 <div className="viewport-box">
                   <div className="main-circle">
                     {/* Add the three sub-circles that will display the icons */}
-                    {selectedIconURLs.map((url, index) => (
+                    {selectedIconURLs.map((icon, index) => (
                       <div key={index} className="sub-circle">
-                        {url && <img src={url} alt={`Rotating Icon ${index + 1}`} className="circle-icon-style" />}
+                        {icon.url && <img src={icon.url} alt={`Rotating Icon ${index + 1}`} className={icon.className} />}
                       </div>
                     ))}
                   </div>
@@ -1076,32 +1101,40 @@ export default function LandingPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 20px 240px 20px 0; /* Increased right padding to shift content further left */
+          padding: 20px 240px 20px 0;
         }
         .main-circle {
-          width: 300px;
-          height: 300px;
+          width: 400px;
+          height: 400px;
           border: solid 2px #fffce1;
           border-radius: 50%;
-          position: relative; /* Essential for absolute positioning of children */
+          position: relative;
         }
         .sub-circle {
-          /* GSAP will handle positioning (top, left, x, y, xPercent, yPercent) */
-          /* It's important that sub-circles are 'position: absolute' for GSAP to correctly place them within .main-circle */
-          position: absolute; 
+          position: absolute;
+          width: 80px;
+          height: 80px;
+          background: rgba(255, 255, 255, 0.1);
+          border-radius: 50%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          backdrop-filter: blur(4px);
+          border: 1px solid rgba(255, 255, 255, 0.2);
         }
-        .circle-icon-style { /* Style for the img tags within sub-circles */
-            width: 50px; 
-            height: 50px;
-            display: block; /* Or inline-block, depending on desired layout within sub-circle */
-            object-fit: contain; /* Or cover, depending on image aspect ratios */
-            border-radius: 50%; /* Optional: if you want the icons themselves to be circular */
+        .circle-icon-style {
+          width: 55px;
+          height: 55px;
+          display: block;
+          object-fit: contain;
+          border-radius: 50%;
+          filter: brightness(1.2);
         }
-        /* Removed or comment out the old .main-circle :global(img) if no longer needed */
-        /* .main-circle :global(img) { 
-            width: 50px; 
-            height: 50px;
-        } */
+        .lockedin-logo {
+          width: 70px !important;
+          height: 70px !important;
+          object-fit: contain;
+        }
       `}</style>
     </>
   );
