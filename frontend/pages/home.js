@@ -1653,9 +1653,16 @@ const Home = () => {
                     </div>
                     <div>
                       <p className="text-gray-400 mb-1">Last Activity</p>
-                      <p>{userStateDetails.lastTaskTimestamp.toNumber() ? 
-                        formatDate(userStateDetails.lastTaskTimestamp.toNumber()).dateStr : 
-                        'No activity'}</p>
+                      <div>
+                        {userStateDetails.lastTaskTimestamp.toNumber() ? (
+                          <>
+                            <p>{formatDate(userStateDetails.lastTaskTimestamp.toNumber()).dateStr}</p>
+                            <p className="text-xs text-gray-400">{formatDate(userStateDetails.lastTaskTimestamp.toNumber()).timeStr}</p>
+                          </>
+                        ) : (
+                          <p>No activity</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardBody>
