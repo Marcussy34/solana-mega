@@ -318,9 +318,8 @@ export default function LandingPage() {
 
   // Navbar items
   const navItems = [
-    { name: "Features", link: "#features" },
-    { name: "Benefits", link: "#benefits" },
-    { name: "Testimonials", link: "#testimonials" },
+
+    
   ];
 
   // Images for the marquee
@@ -553,7 +552,7 @@ export default function LandingPage() {
               exit={{ y: -100 }}
               transition={{ duration: 0.3, ease: "easeInOut" }}
             >
-              <div className="container mx-auto px-4">
+              <div className="mx-auto px-0 w-full max-w-7xl">
                 <div className="flex items-center justify-between h-16">
                   {/* Logo */}
                   <Link href="/" className="flex items-center">
@@ -658,7 +657,7 @@ export default function LandingPage() {
           <div className="relative z-10 container mx-auto px-4">
             <div className="flex flex-col md:flex-row items-center justify-between min-h-[calc(100vh-5rem)] pt-16 md:pt-0 gap-8">
               {/* Text Content Block */}
-              <div className="md:w-1/2 lg:w-3/5 max-w-2xl text-left">
+              <div className="md:w-1/2 lg:w-3/5 max-w-2xl text-left md:ml-16 lg:ml-24">
                 <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 text-white">
                   LockedIn
                 </h1>
@@ -1001,7 +1000,7 @@ export default function LandingPage() {
             <p className="text-lg md:text-xl text-zinc-400 mb-12 max-w-3xl mx-auto text-center">
               To generate yield, your deposited USDC is strategically allocated across a diversified portfolio of on-chain products. Our system continuously monitors and optimizes these positions to maximize returns while managing risk. Here are some of the core strategies we employ:
             </p>
-            <HorizontalScroller items={investmentProductsData} speed={5000} /> {/* Using the new scroller, speed updated from 25000 to 12500 */}
+            <HorizontalScroller items={investmentProductsData} speed={12500} /> {/* Using the new scroller, speed updated from 25000 to 12500 */}
           </div>
         </section>
 
