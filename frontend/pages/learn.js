@@ -220,10 +220,14 @@ const LearnPage = () => {
                     }
                     // --- END UPDATED CHECK ---
                     
+                    // Extract depositTimestamp for sorting
+                    const creationTsNum = depositTimestamp && BN.isBN(depositTimestamp) ? depositTimestamp.toNumber() : 0;
+
                     return {
                         publicKey: marketAcct.publicKey,
                         ...marketAcct.account,
                         lockInDurationDays: lockInDurationDays,
+                        creationTimestamp: creationTsNum, // Added for sorting
                     };
                 } catch (e) {
                     console.error(`Failed to fetch/process UserState for market ${marketAcct.publicKey.toBase58()} using address from userStateAccountForBet (${userStateAddress?.toBase58 ? userStateAddress.toBase58() : userStateAddress}):`, e);
@@ -237,6 +241,14 @@ const LearnPage = () => {
 
         const resolvedOpenMarkets = await Promise.all(openMarketPromises);
         console.log(`Found ${resolvedOpenMarkets.length} open markets with user state data.`);
+
+        // Sort markets by creationTimestamp in descending order (most recent first)
+        resolvedOpenMarkets.sort((a, b) => {
+          const tsA = a.creationTimestamp || 0; // Use the new property
+          const tsB = b.creationTimestamp || 0; // Use the new property
+          return tsB - tsA; // Sort descending
+        });
+        
         setOpenMarkets(resolvedOpenMarkets);
 
     } catch (error) {
