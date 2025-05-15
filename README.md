@@ -1,11 +1,11 @@
-# 📚💸 SkillStreak – Learn, Earn & Build Habits on Solana  
+# 📚💸 LockedIn – Learn, Earn & Build Habits on Solana  
 **A gamified Learn-to-Earn app combining education, DeFi yield, and behavioral finance.**
 
 ---
 
 ## 🧠 Overview
 
-**SkillStreak** is a **Learn-to-Earn DeFi app** on **Solana** that helps users develop real-world skills while earning yield on their capital. Users deposit **USDC**, choose a learning track (like crypto, coding, or language skills), and complete **daily tasks** to earn up to **30% APR**.
+**LockedIn** is a **Learn-to-Earn DeFi app** on **Solana** that helps users develop real-world skills while earning yield on their capital. Users deposit **USDC**, choose a learning track (like crypto, coding, or language skills), and complete **daily tasks** to earn up to **30% APR**.
 
 It's designed to **gamify consistency** with **streaks**, **top-up penalties**, and a DeFi-powered reward system that builds both habit and capital. Think **Duolingo meets DeFi**, with **financial stakes for personal growth**.
 
@@ -184,7 +184,7 @@ The project is structured into two main directories:
 
 ## 🎯 Why It Matters
 
-SkillStreak addresses real problems:
+LockedIn addresses real problems:
 - Builds motivation and discipline in online learning
 - Makes DeFi yield meaningful and behavior-based
 - Bridges **Web3**, **education**, and **gamification** into one flow
@@ -215,47 +215,3 @@ SkillStreak addresses real problems:
 - Builders, devs, and DeFi natives  
 - Anyone who wants to **earn while they grow**
 
-## ��️ Development Setup
-
-### Requirements
-- Node.js v18+ and npm/yarn
-- Solana CLI tools
-- Anchor framework
-- Phantom wallet or compatible Solana wallet
-
-### Frontend Setup
-```bash
-# Navigate to frontend directory
-cd frontend
-
-# Install dependencies
-npm install --legacy-peer-deps
-
-# Start development server
-npm run dev
-```
-
-### Backend/Solana Program Setup
-```bash
-# Navigate to program directory
-cd backend/skillstreak_program
-
-# Build the program
-anchor build
-
-# Test the program
-anchor test
-
-# Deploy to localnet
-anchor deploy
-```
-
-### Environment Variables
-### Create a `.env.local` file in the frontend directory with:
-```
-NEXT_PUBLIC_CLUSTER_URL=http://localhost:8899
-# Or use Solana Devnet
-# NEXT_PUBLIC_CLUSTER_URL=https://api.devnet.solana.com
-```
-
----
