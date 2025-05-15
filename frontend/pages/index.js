@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useRef, useEffect, useId } from "react";
+import React, { useState, useRef, useEffect, useId, useCallback } from "react";
 import { ContainerScroll, Header, Card } from "@/components/ui/container-scroll-animation";
 import { CardContainer, CardBody, CardItem } from "@/components/ui/3d-card";
 import { ThreeDMarquee } from "@/components/ui/3d-marquee";
@@ -34,7 +34,7 @@ export default function LandingPage() {
   const [draggableLoaded, setDraggableLoaded] = useState(false);
   
   // State for spinning circle icons
-  const [randomIconPoolURLs, setRandomIconPoolURLs] = useState([
+  const [randomIconPoolURLs] = useState([
     '/image/lockedin_logo.png', 
     '/solanaLogoMark.svg', 
     '/usd-coin-usdc-logo.svg'
@@ -55,6 +55,40 @@ export default function LandingPage() {
     "'Times New Roman', serif"
   ];
   
+  // Add this state near the top with other states
+  const [isGsapReady, setIsGsapReady] = useState(false);
+
+  // Update the GSAP loading effect
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      let intervalId = null;
+
+      const checkGsap = () => {
+        if (window.gsap) {
+          setIsGsapReady(true);
+          if (intervalId) {
+            clearInterval(intervalId);
+          }
+        }
+      };
+      
+      // Check immediately
+      checkGsap();
+      
+      // Set up interval if GSAP isn't available yet
+      if (!window.gsap) {
+        intervalId = setInterval(checkGsap, 100);
+      }
+      
+      // Cleanup
+      return () => {
+        if (intervalId) {
+          clearInterval(intervalId);
+        }
+      };
+    }
+  }, []);
+
   // Navbar visibility control
   useEffect(() => {
     // Initially show navbar
@@ -149,61 +183,118 @@ export default function LandingPage() {
     }
   }, [gsapLoaded, scrollTriggerLoaded, scrollToLoaded]);
 
-  useEffect(() => {
-    // Logic for the spinning circle images
-    if (gsapLoaded && typeof window !== 'undefined') { 
-      const uniqueImageUrls = Array.from(new Set(randomIconPoolURLs));
-      const shuffledUniqueImageUrls = [...uniqueImageUrls].sort(() => 0.5 - Math.random());
+  // Add these near the top with other imports
+  const animationsRef = useRef(null);
+  const mainCircleRef = useRef(null);
+  const subCirclesRef = useRef([]);
 
-      const newSelectedIconURLsOutput = [];
-      const numIconsToDisplay = 3; // For the 3 sub-circles
-
-      for (let i = 0; i < numIconsToDisplay; i++) {
-        if (i < shuffledUniqueImageUrls.length) {
-          const url = shuffledUniqueImageUrls[i];
-          // Add a class to identify the LockedIn logo
-          const className = url.includes('lockedin_logo') ? 'circle-icon-style lockedin-logo' : 'circle-icon-style';
-          newSelectedIconURLsOutput.push({ url, className });
-        } else {
-          newSelectedIconURLsOutput.push({ url: '', className: 'circle-icon-style' });
-        }
-      }
-      setSelectedIconURLs(newSelectedIconURLsOutput);
-
-      // GSAP Animation for .main-circle and .sub-circles
-      const mainCircle = document.querySelector('.main-circle');
-      const subCircles = gsap.utils.toArray(".sub-circle");
-
-      if (mainCircle && subCircles.length === numIconsToDisplay) {
-        // Example GSAP animation (adapt to your needs):
-        const animation = gsap.timeline({ repeat: -1, defaults: { duration: 50, ease: "none" } });
-        animation.to(mainCircle, { rotation: 360 });
-
-        subCircles.forEach((subCircle, index) => {
-          const angle = (index / numIconsToDisplay) * Math.PI * 2;
-          const radius = mainCircle.offsetWidth / 2; // Corrected radius to place icons on the circumference
-          gsap.set(subCircle, {
-            position: 'absolute',
-            left: '50%',
-            top: '50%',
-            xPercent: -50,
-            yPercent: -50,
-            x: Math.cos(angle) * radius,
-            y: Math.sin(angle) * radius,
-            // Ensure the <img> tags inside .sub-circle are visible and sized
-          });
-          animation.to(subCircle, { rotation: -360 }, 0); // Make sub-circles counter-rotate to stay upright
-        });
-        
-        // Cleanup function for the animation
-        return () => {
-          animation.kill();
-          gsap.set(subCircles, { clearProps: "all" }); 
-          gsap.set(mainCircle, { clearProps: "rotation" });
-        };
-      }
+  // Function to initialize animations
+  const initializeAnimations = useCallback(() => {
+    if (!isGsapReady || typeof window === 'undefined') {
+      console.log('GSAP not ready yet');
+      return;
     }
-  }, [gsapLoaded, randomIconPoolURLs]); // Corrected dependencies
+
+    try {
+      const gsap = window.gsap;
+      
+      // Kill any existing animations
+      if (animationsRef.current) {
+        animationsRef.current.forEach(anim => anim?.kill());
+      }
+      animationsRef.current = [];
+
+      const mainCircle = mainCircleRef.current;
+      const subCircles = subCirclesRef.current;
+
+      if (!mainCircle || subCircles.length === 0) {
+        console.log('Elements not found');
+        return;
+      }
+
+      // Create main rotation animation
+      const mainAnim = gsap.to(mainCircle, {
+        rotation: 360,
+        duration: 50,
+        repeat: -1,
+        ease: "none"
+      });
+      animationsRef.current.push(mainAnim);
+
+      // Set up and animate sub-circles
+      subCircles.forEach((subCircle, index) => {
+        if (!subCircle) return;
+        
+        const angle = (index / 3) * Math.PI * 2;
+        const radius = mainCircle.offsetWidth / 2;
+
+        gsap.set(subCircle, {
+          position: 'absolute',
+          left: '50%',
+          top: '50%',
+          xPercent: -50,
+          yPercent: -50,
+          x: Math.cos(angle) * radius,
+          y: Math.sin(angle) * radius
+        });
+
+        const subAnim = gsap.to(subCircle, {
+          rotation: -360,
+          duration: 50,
+          repeat: -1,
+          ease: "none"
+        });
+        animationsRef.current.push(subAnim);
+      });
+    } catch (error) {
+      console.error('Error initializing animations:', error);
+    }
+  }, [isGsapReady]);
+
+  // Effect for handling animations
+  useEffect(() => {
+    // Only initialize if GSAP is ready
+    if (isGsapReady) {
+      const timeoutId = setTimeout(() => {
+        initializeAnimations();
+      }, 100); // Increased timeout to ensure DOM is ready
+
+      return () => {
+        clearTimeout(timeoutId);
+        if (animationsRef.current) {
+          animationsRef.current.forEach(anim => anim?.kill());
+          animationsRef.current = null;
+        }
+        
+        if (window.gsap) {
+          if (mainCircleRef.current) {
+            window.gsap.set(mainCircleRef.current, { clearProps: "all" });
+          }
+          
+          subCirclesRef.current.forEach(circle => {
+            if (circle) {
+              window.gsap.set(circle, { clearProps: "all" });
+            }
+          });
+        }
+      };
+    }
+  }, [initializeAnimations, isGsapReady]);
+
+  // Effect for setting up icons
+  useEffect(() => {
+    if (!isGsapReady) return;
+
+    const uniqueImageUrls = Array.from(new Set(randomIconPoolURLs));
+    const shuffledUniqueImageUrls = [...uniqueImageUrls].sort(() => 0.5 - Math.random());
+    
+    const newSelectedIconURLsOutput = shuffledUniqueImageUrls.slice(0, 3).map(url => ({
+      url,
+      className: url.includes('lockedin_logo') ? 'circle-icon-style lockedin-logo' : 'circle-icon-style'
+    }));
+    
+    setSelectedIconURLs(newSelectedIconURLsOutput);
+  }, [isGsapReady, randomIconPoolURLs]);
 
   // Initialize GSAP and ScrollTrigger for Panels
   const initPanelGSAP = () => {
@@ -429,7 +520,7 @@ export default function LandingPage() {
       <Script 
         src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.4/gsap.min.js"
         strategy="afterInteractive"
-        onLoad={() => setGsapLoaded(true)}
+        onLoad={() => setIsGsapReady(true)}
       />
       <Script 
         src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.4/ScrollTrigger.min.js"
@@ -536,19 +627,6 @@ export default function LandingPage() {
                       </svg>
                       Powered by Solana
                     </div>
-                    
-                    <motion.div
-                      className="text-zinc-500 text-sm mt-2 flex gap-3"
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 0.8 }}
-                      transition={{ duration: 0.6, delay: 0.6 }}
-                    >
-                      <span>Web3</span>
-                      <span>•</span>
-                      <span>Crypto</span>
-                      <span>•</span>
-                      <span>Blockchain</span>
-                    </motion.div>
                   </motion.div>
                 </>
               )}
@@ -702,11 +780,14 @@ export default function LandingPage() {
               {/* Spinning Circle Block */}
               <div className="md:w-1/2 lg:w-2/5 flex justify-center items-center mt-8 md:mt-0">
                 <div className="viewport-box">
-                  <div className="main-circle">
-                    {/* Add the three sub-circles that will display the icons */}
+                  <div className="main-circle" ref={mainCircleRef}>
                     {selectedIconURLs.map((icon, index) => (
-                      <div key={index} className="sub-circle">
-                        {icon.url && <img src={icon.url} alt={`Rotating Icon ${index + 1}`} className={icon.className} />}
+                      <div 
+                        key={index} 
+                        className="sub-circle"
+                        ref={el => subCirclesRef.current[index] = el}
+                      >
+                        {icon.url && <img src={icon.url} alt={`Icon ${index + 1}`} className={icon.className} />}
                       </div>
                     ))}
                   </div>
@@ -1013,7 +1094,6 @@ export default function LandingPage() {
               </div>
             </div>
           </div> */
-        // {/* // </section> */} */ 
         }
 
         {/* How We Invest Your Funds Section - Updated with Horizontal Scroller */}
