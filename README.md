@@ -33,8 +33,8 @@ It's designed to **gamify consistency** with **streaks**, **top-up penalties**, 
 - Users pick a track:
   - "Solana Basics"
   - "Rust for Smart Contracts"
-  - "Duolingo-style Language Learning" *(in-app simulation)*
-- Completing a task each day **maintains your streak**.
+  - "English Beginner by Duolingo" 
+- Completing a task within 24 hours of last task **maintains your streak**.
 - Streak = yield multiplier + reputation boost.
 
 ---
@@ -53,17 +53,17 @@ It's designed to **gamify consistency** with **streaks**, **top-up penalties**, 
 
 ---
 
-### 🔓 4. **Flexible Withdrawal Options**
+### 🔓 4. **Withdrawal Options**
 - At the end of lock-in: get **full balance + earned interest**.
-- Early withdrawal allowed: **5% exit fee**, but keep accrued interest.
-- Transparency and flexibility built in for real-life needs.
+- Early withdrawal allowed: **50% exit fee**, but keep accrued interest.
+- Transparency built in for real-life needs.
 
 ---
 
-## 🧠 Bonus Feature (Simulated for MVP)
+## 🧠 Bonus Feature
 
 ### 🗣️ **Duolingo-style Language Track**
-- Fully integrated second learning track that mimics Duolingo's micro-lessons.
+- Fully integrated English track that mimics Duolingo's micro-lessons.
 - Designed to showcase **multi-track support** and **fun UX**.
 - Sets the stage for future **third-party learning integrations**.
 
@@ -79,10 +79,9 @@ It's designed to **gamify consistency** with **streaks**, **top-up penalties**, 
 - You stake USDC on your prediction (e.g., 10 USDC).
 - Outcome determined by user's streak performance.
 
-#### MVP Implementation:
+#### Implementation:
 - Built on **Solana Devnet** using **Anchor smart contracts**.
-- Outcomes are **hardcoded** in demo mode.
-- Correct predictions = earn 1.5x or more.
+- Correct predictions = earn up to 200% depending on the pool.
 - All bets are **on-chain**, trustless, and transparent.
 
 #### Future Vision:
