@@ -512,7 +512,13 @@ const LearnPage = () => {
               <h1 className="text-2xl md:text-3xl font-bold mb-4 text-white">Leaderboard (Open Markets)</h1>
               
               {isLoadingMarkets && <p className="text-neutral-400">Loading markets...</p>}
-              {fetchError && <p className="text-red-500">Error: {fetchError}</p>}
+              {fetchError && (
+                fetchError.startsWith('Transaction Sent:') ? (
+                  <p className="text-green-500">Status: {fetchError}</p>
+                ) : (
+                  <p className="text-red-500">Error: {fetchError}</p>
+                )
+              )}
 
               {!isLoadingMarkets && !fetchError && (
                   <>
@@ -633,7 +639,11 @@ const LearnPage = () => {
                 </div>
               </div>
 
-              {fetchError && <p className="text-red-500 text-sm mb-3">Error: {fetchError}</p>} 
+              {fetchError && (
+                <p className={`text-sm mb-3 ${fetchError.toLowerCase().includes('transaction sent') ? 'text-green-500' : 'text-red-500'}`}>
+                  {fetchError.toLowerCase().includes('transaction sent') ? fetchError.replace('Error:', 'Status:') : `Error: ${fetchError}`}
+                </p>
+              )}
 
               <div className="flex justify-end gap-3">
                 <button 
