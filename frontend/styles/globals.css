@@ -204,3 +204,56 @@ body {
 .text-shadow {
   text-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
 }
+
+@keyframes aurora {
+  0% {
+    transform: translateX(-100%) rotate(0deg);
+  }
+  100% {
+    transform: translateX(100%) rotate(360deg);
+  }
+}
+
+@keyframes colorCycle {
+  0% {
+    background-position: 200% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+.animate-colorful {
+  background: linear-gradient(
+    to right,
+    #FF0080,
+    #FF0000,
+    #FF8C00,
+    #FFD700,
+    #00FF00,
+    #00FFFF,
+    #0080FF,
+    #7928CA,
+    #FF0080,
+    #FF0000,
+    #FF8C00,
+    #FFD700,
+    #00FF00,
+    #00FFFF,
+    #0080FF,
+    #7928CA,
+    #FF0080
+  );
+  background-size: 400% 100%;
+  animation: colorCycle 8s linear infinite;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  text-shadow: none;
+  filter: brightness(1.2) contrast(1.2);
+  mix-blend-mode: normal;
+  display: inline-block;
+  will-change: transform;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}

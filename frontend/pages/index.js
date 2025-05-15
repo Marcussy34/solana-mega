@@ -8,6 +8,7 @@ import Link from "next/link";
 import Script from 'next/script';
 import Head from 'next/head';
 import { useOutsideClick } from "@/hooks/use-outside-click";
+import { AuroraText } from "@/components/magicui/aurora-text";
 
 export default function LandingPage() {
   // State for mobile menu
@@ -761,8 +762,23 @@ export default function LandingPage() {
             <div className="flex flex-col md:flex-row items-center justify-between min-h-[calc(100vh-5rem)] pt-16 md:pt-0 gap-8">
               {/* Text Content Block */}
               <div className="md:w-1/2 lg:w-3/5 max-w-2xl text-left md:ml-16 lg:ml-24">
-                <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6 text-white">
-                  LockedIn
+                <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold mb-6">
+                  <AuroraText 
+                    colors={[
+                      "#FF0080",  // Hot pink
+                      "#FF0000",  // Bright red
+                      "#FF8C00",  // Bright orange
+                      "#FFD700",  // Gold
+                      "#00FF00",  // Bright green
+                      "#00FFFF",  // Cyan
+                      "#0080FF",  // Bright blue
+                      "#7928CA",  // Purple
+                    ]} 
+                    speed={3}
+                    className="text-4xl md:text-6xl lg:text-7xl font-bold"
+                  >
+                    LockedIn
+                  </AuroraText>
                 </h1>
                 <p className="text-xl md:text-2xl mb-8 text-zinc-300">
                   Learn, Earn & Build Habits on Solana. Master new skills while earning yield on your capital.

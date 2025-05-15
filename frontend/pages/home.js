@@ -27,6 +27,7 @@ import {
 } from '@solana/spl-token';
 import idl from '../lib/idl/skillstreak_program.json';
 import Image from 'next/image'; // Import Image component
+import { AuroraText } from '@/components/magicui/aurora-text';
 
 // HeroUI components
 import {
@@ -1216,7 +1217,9 @@ const Home = () => {
           <Link href="/">
             <div className="flex items-center cursor-pointer hover:opacity-80 transition-opacity">
               <Image src="/image/lockedin_logo.png" alt="LockedIn Logo" width={24} height={24} className="mr-2" />
-              <h1 className="font-medium text-xl">LockedIn</h1>
+              <h1 className="font-medium text-xl text-white">
+                LockedIn
+              </h1>
             </div>
           </Link>
         </NavbarBrand>
