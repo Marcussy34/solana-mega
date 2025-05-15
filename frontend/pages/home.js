@@ -1213,10 +1213,12 @@ const Home = () => {
         position="sticky"
       >
         <NavbarBrand>
-          <div className="flex items-center">
-            <Image src="/lock-svgrepo-com.svg" alt="LockedIn Logo" width={24} height={24} className="mr-2" />
-            <h1 className="font-medium text-xl">LockedIn</h1>
-          </div>
+          <Link href="/">
+            <div className="flex items-center cursor-pointer hover:opacity-80 transition-opacity">
+              <Image src="/lock-svgrepo-com.svg" alt="LockedIn Logo" width={24} height={24} className="mr-2" />
+              <h1 className="font-medium text-xl">LockedIn</h1>
+            </div>
+          </Link>
         </NavbarBrand>
         <NavbarContent justify="end">
           <NavbarItem>
