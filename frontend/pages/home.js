@@ -1290,7 +1290,7 @@ const Home = () => {
       </Navbar>
       
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 py-12">
+      <div className="max-w-4xl mx-auto px-4 pt-3">
         {/* Transaction Status Notification */}
         {transactionStatus && notificationVisible && (
           <div 
@@ -1344,95 +1344,97 @@ const Home = () => {
         {userStateDetails && (
           <div className="space-y-6">
             {/* Main Balance Card */}
-            <Card className="bg-gradient-to-b from-gray-800/50 to-gray-900/50 border border-gray-700/50 shadow-xl overflow-hidden rounded-2xl">
-                <CardBody className="p-8">
-                    <div className="space-y-8">
+            <Card className="bg-[#0A0B0D] border border-gray-800 shadow-xl overflow-hidden rounded-2xl">
+                <CardBody className="p-6">
+                    <div className="space-y-6">
                         {/* Balance Header */}
                         <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <h2 className="text-2xl font-medium">Your Balance</h2>
-                                <Tooltip
-                                    content={
-                                        <div className="max-w-xs p-2">
-                                            <p className="text-sm">
-                                                This is your learning account balance. When starting a streak, you can choose how much to lock from this account.
-                                            </p>
-                                        </div>
-                                    }
-                                    placement="right"
-                                >
-                                    <div className="cursor-help">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-                                        </svg>
-                                    </div>
-                                </Tooltip>
+                            <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-blue-500/10 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                                        <path d="M8.433 7.418c.155-.103.346-.196.567-.267v1.698a2.305 2.305 0 01-.567-.267C8.07 8.34 8 8.114 8 8c0-.114.07-.34.433-.582zM11 12.849v-1.698c.22.071.412.164.567.267.364.243.433.468.433.582 0 .114-.07.34-.433.582a2.305 2.305 0 01-.567.267z" />
+                                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-13a1 1 0 10-2 0v.092a4.535 4.535 0 00-1.676.662C6.602 6.234 6 7.009 6 8c0 .99.602 1.765 1.324 2.246.48.32 1.054.545 1.676.662v1.941c-.391-.127-.68-.317-.843-.504a1 1 0 10-1.51 1.31c.562.649 1.413 1.076 2.353 1.253V15a1 1 0 102 0v-.092a4.535 4.535 0 001.676-.662C13.398 13.766 14 12.991 14 12c0-.99-.602-1.765-1.324-2.246A4.535 4.535 0 0011 9.092V7.151c.391.127.68.317.843.504a1 1 0 101.511-1.31c-.563-.649-1.413-1.076-2.354-1.253V5z" clipRule="evenodd" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h2 className="text-base font-medium">Your Balance</h2>
+                                    <p className="text-sm text-gray-400">Manage your funds</p>
+                                </div>
                             </div>
-                            <div className="flex items-center gap-4">
+                            <div className="flex items-center gap-2">
                                 <Button
-                                    className="bg-green-600/50 hover:bg-green-500/50 border border-green-500/50 rounded-xl px-4 py-2 transition-all duration-200 ease-in-out"
+                                    className="bg-green-600 hover:bg-green-700 text-white rounded-lg px-4 py-2"
+                                    size="sm"
                                     onClick={() => setShowDepositModal(true)}
                                     startContent={
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" clipRule="evenodd" />
-                                        </svg>
+                                        <span className="text-lg font-medium">+</span>
                                     }
                                 >
                                     Deposit
                                 </Button>
                                 <Button
-                                    className="bg-gray-700/50 hover:bg-gray-600/50 border border-gray-600/50 rounded-xl px-4 py-2 transition-all duration-200 ease-in-out"
+                                    className="bg-gray-800 hover:bg-gray-700 text-white rounded-lg px-4 py-2"
+                                    size="sm"
                                     onClick={() => setShowWithdrawUnlockedModal(true)}
                                     startContent={
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M3 10a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                                        </svg>
+                                        <span className="text-lg font-medium">−</span>
                                     }
                                 >
                                     Withdraw
                                 </Button>
                                 <Chip
-                                    className={`${userStateDetails.depositAmount.toNumber() > 0 ? 
-                                        'bg-green-500/10 border-green-500/20 text-green-400' : 
-                                        'bg-gray-500/10 border-gray-500/20 text-gray-400'
-                                    } border`}
+                                    className="bg-green-500/10 border border-green-500/20 text-green-400"
                                     size="sm"
                                 >
-                                    {userStateDetails.depositAmount.toNumber() > 0 ? "Active" : "Inactive"}
+                                    Active
                                 </Chip>
                             </div>
                         </div>
 
-                        {/* Balance Amount */}
-                        <div>
-                            <div className="flex items-baseline gap-2">
-                                <span className="text-4xl font-medium tracking-tight">
-                                    {((userStateDetails.depositAmount.toNumber() - userStateDetails.initialDepositAmount.toNumber()) / 1_000_000).toFixed(2)}
-                                </span>
-                                <span className="text-gray-400">USDC</span>
+                        {/* Main Balance */}
+                        <div className="relative">
+                            <div className="absolute -inset-1 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-green-500/20 rounded-lg blur-xl opacity-50"></div>
+                            <div className="relative flex items-baseline gap-2 py-4">
+                                <div className="flex items-baseline">
+                                    <span className="text-5xl font-semibold bg-gradient-to-r from-white via-gray-100 to-gray-300 text-transparent bg-clip-text">
+                                        {((userStateDetails.depositAmount.toNumber() - userStateDetails.initialDepositAmount.toNumber()) / 1_000_000).toFixed(2)}
+                                    </span>
+                                    <span className="text-xl text-gray-400 ml-2">USDC</span>
+                                </div>
                             </div>
-                            <div className="mt-4 grid grid-cols-3 gap-6">
-                                <div>
-                                    <p className="text-sm text-gray-400 mb-1">Locked Amount</p>
-                                    <p className="text-lg font-medium">
-                                        {(userStateDetails.initialDepositAmount.toNumber() / 1_000_000).toFixed(2)}
-                                        <span className="text-sm text-gray-400 ml-1">USDC</span>
-                                    </p>
+                        </div>
+
+                        {/* Balance Details */}
+                        <div className="grid grid-cols-3 gap-4 bg-gray-800/20 rounded-xl p-4">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-blue-400"></div>
+                                    <span className="text-sm text-gray-400">Locked Amount</span>
                                 </div>
-                                <div>
-                                    <p className="text-sm text-gray-400 mb-1">Total Balance</p>
-                                    <p className="text-lg font-medium">
-                                        {(userStateDetails.depositAmount.toNumber() / 1_000_000).toFixed(2)}
-                                        <span className="text-sm text-gray-400 ml-1">USDC</span>
-                                    </p>
+                                <p className="mt-1 text-sm">
+                                    {(userStateDetails.initialDepositAmount.toNumber() / 1_000_000).toFixed(2)}
+                                    <span className="text-gray-400 ml-1">USDC</span>
+                                </p>
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-purple-400"></div>
+                                    <span className="text-sm text-gray-400">Total Balance</span>
                                 </div>
-                                <div>
-                                    <p className="text-sm text-gray-400 mb-1">Accrued Yield</p>
-                                    <p className="text-lg font-medium text-green-400">
-                                        +{(userStateDetails.accruedYield.toNumber() / 1_000_000).toFixed(4)}
-                                        <span className="text-sm text-gray-400 ml-1">USDC</span>
-                                    </p>
+                                <p className="mt-1 text-sm">
+                                    {(userStateDetails.depositAmount.toNumber() / 1_000_000).toFixed(2)}
+                                    <span className="text-gray-400 ml-1">USDC</span>
+                                </p>
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                                    <span className="text-sm text-gray-400">Accrued Yield</span>
                                 </div>
+                                <p className="mt-1 text-sm text-green-400">
+                                    +{(userStateDetails.accruedYield.toNumber() / 1_000_000).toFixed(4)}
+                                    <span className="text-gray-400 ml-1">USDC</span>
+                                </p>
                             </div>
                         </div>
                     </div>
@@ -1653,9 +1655,16 @@ const Home = () => {
                     </div>
                     <div>
                       <p className="text-gray-400 mb-1">Last Activity</p>
-                      <p>{userStateDetails.lastTaskTimestamp.toNumber() ? 
-                        formatDate(userStateDetails.lastTaskTimestamp.toNumber()).dateStr : 
-                        'No activity'}</p>
+                      <div>
+                        {userStateDetails.lastTaskTimestamp.toNumber() ? (
+                          <>
+                            <p>{formatDate(userStateDetails.lastTaskTimestamp.toNumber()).dateStr}</p>
+                            <p className="text-xs text-gray-400">{formatDate(userStateDetails.lastTaskTimestamp.toNumber()).timeStr}</p>
+                          </>
+                        ) : (
+                          <p>No activity</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardBody>
