@@ -1290,7 +1290,7 @@ const Home = () => {
       </Navbar>
       
       {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 pt-3">
+      <div className="max-w-4xl mx-auto px-4 pt-3 pb-24">
         {/* Transaction Status Notification */}
         {transactionStatus && notificationVisible && (
           <div 
