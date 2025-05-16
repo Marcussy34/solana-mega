@@ -20,6 +20,14 @@ It's designed to **gamify consistency** with **streaks**, **top-up penalties**, 
 
 ---
 
+## How it works
+
+Here's a diagram illustrating the user flow:
+
+![LockedIn User Flow](./frontend/public/image/lockedin_userflow.png)
+
+---
+
 ## 🔥 Key Features
 
 ### ✅ 1. **USDC Deposits + DeFi Yield**
