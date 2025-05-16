@@ -20,7 +20,7 @@ It's designed to **gamify consistency** with **streaks**, **top-up penalties**, 
 
 ---
 
-## How it works
+## ✨How it works
 
 Here's a diagram illustrating the user flow:
 
