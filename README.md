@@ -124,7 +124,7 @@ It's designed to **gamify consistency** with **streaks**, **top-up penalties**, 
 - **React (v18.2.0)**
 - **Tailwind CSS** – UI styling with **tailwindcss-animate**
 - **Framer Motion & GSAP** – animations
-- **Solana Wallet Adapter** – for Phantom, Backpack, etc.
+- **Solana Wallet Adapter** – for Phantom
 - **@heroui/react & @tabler/icons-react** – UI components/icons
 - **class-variance-authority & clsx** – utility styling
 
@@ -137,8 +137,6 @@ It's designed to **gamify consistency** with **streaks**, **top-up penalties**, 
 
 ### 🔧 Backend / Infra
 - **Anchor-based Solana Program**
-- **Supabase** – for user streaks, deposits, history (planned)
-- **CRON Jobs** – for streak validation (planned)
 - **Vercel** – frontend deployment
 
 ---
@@ -174,10 +172,9 @@ The project is structured into two main directories:
 ## 🔮 Vision & Roadmap
 
 - 🌐 Multi-platform learning: Bring in any platform via plug-ins.
-- 📊 On-chain credentials: NFT badges for streaks, proof-of-skill.
 - 🎮 Gamified UX: Leaderboards, achievements, collectibles.
+- 📊 On-chain credentials: NFT badges for streaks, proof-of-skill.
 - 🤝 Community challenges: Weekly quests, cohort-based learning.
-- 📱 Mobile-first design: Habit stackers on the go.
 
 ---
 
@@ -186,7 +183,7 @@ The project is structured into two main directories:
 LockedIn addresses real problems:
 - Builds motivation and discipline in online learning
 - Makes DeFi yield meaningful and behavior-based
-- Bridges **Web3**, **education**, and **gamification** into one flow
+- Bridges **Web2 education**, **Web3 earning** and **gamification** into one flow
 - Aligns **capital**, **habits**, and **growth** like never before
 
 ---
@@ -198,12 +195,13 @@ LockedIn addresses real problems:
 - ✅ Learning track UI implementation (courses, lessons)
 - ✅ Initial Solana program structure (Anchor)
 - ✅ User initialization flow
-- ✅ USDC deposit & yield logic 
+- ✅ USDC deposit
 - ✅ Streak management 
 - ✅ Solana program integration with frontend
 - ✅ Long/Short streak betting 
+- ✅ Full production deployment
+- 🔜 USD Yield Logic (placeholders ready)
 - 🔜 External integration (placeholders ready)
-- 🔜 Full production deployment
 
 ---
 
