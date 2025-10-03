@@ -227,6 +227,7 @@ export default function LandingPage() {
         if (!subCircle) return;
         
         const angle = (index / 3) * Math.PI * 2;
+        // Position logos so the circle line goes through their center
         const radius = mainCircle.offsetWidth / 2;
 
         gsap.set(subCircle, {
@@ -260,8 +261,17 @@ export default function LandingPage() {
         initializeAnimations();
       }, 100); // Increased timeout to ensure DOM is ready
 
+      // Handle window resize
+      const handleResize = () => {
+        initializeAnimations();
+      };
+
+      window.addEventListener('resize', handleResize);
+
       return () => {
         clearTimeout(timeoutId);
+        window.removeEventListener('resize', handleResize);
+        
         if (animationsRef.current) {
           animationsRef.current.forEach(anim => anim?.kill());
           animationsRef.current = null;
@@ -1197,19 +1207,25 @@ export default function LandingPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          padding: 20px 240px 20px 0;
+          padding: 20px;
         }
+        
         .main-circle {
-          width: 400px;
-          height: 400px;
+          width: min(400px, 80vw);
+          height: min(400px, 80vw);
+          max-width: 400px;
+          max-height: 400px;
           border: solid 2px #fffce1;
           border-radius: 50%;
           position: relative;
         }
+        
         .sub-circle {
           position: absolute;
-          width: 80px;
-          height: 80px;
+          width: min(80px, 20vw);
+          height: min(80px, 20vw);
+          max-width: 80px;
+          max-height: 80px;
           background: rgba(255, 255, 255, 0.1);
           border-radius: 50%;
           display: flex;
@@ -1218,18 +1234,50 @@ export default function LandingPage() {
           backdrop-filter: blur(4px);
           border: 1px solid rgba(255, 255, 255, 0.2);
         }
+        
         .circle-icon-style {
-          width: 55px;
-          height: 55px;
+          width: 68%;
+          height: 68%;
           display: block;
           object-fit: contain;
           border-radius: 50%;
           filter: brightness(1.2);
         }
+        
         .lockedin-logo {
-          width: 70px !important;
-          height: 70px !important;
+          width: 88% !important;
+          height: 88% !important;
           object-fit: contain;
+        }
+        
+        /* Tablet and smaller */
+        @media (max-width: 768px) {
+          .viewport-box {
+            padding: 20px 0;
+          }
+          
+          .main-circle {
+            width: min(300px, 80vw);
+            height: min(300px, 80vw);
+          }
+          
+          .sub-circle {
+            width: min(60px, 18vw);
+            height: min(60px, 18vw);
+          }
+        }
+        
+        /* Mobile */
+        @media (max-width: 480px) {
+          .main-circle {
+            width: min(250px, 85vw);
+            height: min(250px, 85vw);
+          }
+          
+          .sub-circle {
+            width: min(50px, 17vw);
+            height: min(50px, 17vw);
+          }
         }
       `}</style>
     </>
